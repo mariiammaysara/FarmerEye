@@ -1,6 +1,7 @@
 <div align="center">
   <h1>Farmer Eye Robotic Car</h1>
   <h3>Graduation Project</h3>
+  <img src="docs/assets/robotic_car_image.jpg" width="350" height="350" alt="Farmer Eye Robotic Car">
 </div>
 
 <br>
