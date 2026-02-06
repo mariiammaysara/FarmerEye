@@ -2,7 +2,7 @@
   <h1> Farmer Eye Robotic Car – Graduation Project</h1>
   <h3>Smart AI & IoT System for Real-Time Plant Disease Detection</h3>
   <p align="center">
-    <img src="docs/assets/robotic_car_image.jpg" width="350" height="350" alt="Farmer Eye Robotic Car">
+    <img src="docs/assets/robotic_car_image.jpg" width="400" height="300" alt="Farmer Eye Robotic Car">
   </p>
 </div>
 
@@ -139,8 +139,4 @@ Upon detection, the system provides:
   Mariam Maysara • Fatma Zayed • Mohamed Magdy • Mohamed Hesham
   <br><br>
   <b>FarmerEye Team</b>
-</p>
-
-
-  <i>Developed as part of an advanced AI-IoT initiative for modern agriculture.</i>
 </p>
