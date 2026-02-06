@@ -1,0 +1,12 @@
+numpy
+pandas
+matplotlib
+seaborn
+pillow
+opencv-python
+scikit-learn
+tensorflow
+keras
+websockets
+openpyxl
+# picamera2 # Required for Raspberry Pi, comment out for local development if not on Pi
