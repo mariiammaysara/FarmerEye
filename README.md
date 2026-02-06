@@ -1,8 +1,9 @@
-# Farmer Eye Robotic Car
-### Graduation Project
+<div align="center">
+  <h1>Farmer Eye Robotic Car</h1>
+  <h3>Graduation Project</h3>
+</div>
 
-![Farmer Eye Robotic Car](docs/assets/robotic_car_image.jpg)
-*(Place robotic car image here)*
+<br>
 
 Farmer Eye is a professional-grade AI-IoT solution designed to identify plant diseases in real-time. By combining deep learning (CNNs) with IoT hardware (Raspberry Pi) integrated into a robotic car, it provides farmers with instant diagnostic feedback and treatment recommendations to improve crop yield and health.
 
@@ -102,11 +103,7 @@ python src/combined_detection_stream.py
 <p align="center">
   <br>
   <b>Developed and Designed by</b><br>
-  Mariam Hagag • Fatma Zayed • Mohamed Magdy • Mohamed Hesham
+  Mariam Maysara • Fatma Zayed • Mohamed Magdy • Mohamed Hesham
   <br><br>
   <b>FarmerEye Team</b>
   <br><br>
-  ---
-  <br>
-  <i>Developed as part of an advanced AI-IoT initiative for modern agriculture.</i>
-</p>
