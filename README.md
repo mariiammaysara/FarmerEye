@@ -150,8 +150,9 @@ The model was trained primarily on laboratory leaf images with uniform backgroun
 ## Dataset and Citations
 
 The training dataset incorporates images from the **PlantVillage** dataset:
-- Hughes, D., & Salathé, M. (2015). *An open access repository of images on plant health to enable the development of mobile disease diagnostics*. [arXiv:1511.08060](https://arxiv.org/abs/1511.08060).
-- Detailed dataset breakdown and splits: [data/README.md](data/README.md).
+- **Dataset Sources**: [PlantVillage on Kaggle](https://www.kaggle.com/datasets/emmarex/plantdisease) | [spMohanty/PlantVillage-Dataset (GitHub)](https://github.com/spMohanty/PlantVillage-Dataset)
+- **Paper**: Hughes, D., & Salathé, M. (2015). *An open access repository of images on plant health to enable the development of mobile disease diagnostics*. [arXiv:1511.08060](https://arxiv.org/abs/1511.08060).
+- Detailed dataset breakdown, splits, and cotton subsets: [data/README.md](data/README.md).
 
 ---
 

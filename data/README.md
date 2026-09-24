@@ -15,13 +15,13 @@ This document describes the dataset utilized for training, validating, and testi
 ## 2. Data Sources
 
 1. **PlantVillage Dataset**
-   * **Kaggle**: `[KAGGLE_URL]`
+   * **Kaggle**: [PlantVillage Dataset (emmarex/plantdisease)](https://www.kaggle.com/datasets/emmarex/plantdisease)
    * **Original GitHub Repository**: [spMohanty/PlantVillage-Dataset](https://github.com/spMohanty/PlantVillage-Dataset)
    * **Reference Paper**: *“Using Deep Learning for Image-Based Plant Disease Detection”* (Hughes & Salathé, 2015), [arXiv:1511.08060](https://arxiv.org/abs/1511.08060).
    * **Coverage**: Tomato, Potato, Pepper Bell, and Strawberry classes.
 
 2. **Additional Real-World / Crop Images (Cotton & Field Subsets)**
-   * **Source**: `[DESCRIBE SOURCE + COUNT, or write "TBD"]` — TBD
+   * **Kaggle Reference**: [Cotton Leaf Disease Dataset](https://www.kaggle.com/datasets/dhanushnarayananr/cotton-leaf-disease-dataset)
    * **Coverage**: Cotton disease and pest classes (`Aphids_cotton`, `Army worm_cotton`, `Bacterial blight_cotton`, `Healthy_cotton`, `Powdery mildew_cotton`, `Target spot_cotton`, `cotton_curl_virus`, `cotton_fussarium_wilt`).
 
 > [!NOTE]
@@ -119,7 +119,7 @@ To download the dataset using the Kaggle API:
 
 3. **Download Dataset**:
    ```bash
-   kaggle datasets download -d <owner/slug>
+   kaggle datasets download -d emmarex/plantdisease
    ```
 
 4. **Extract Files**:
