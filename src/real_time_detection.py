@@ -1,3 +1,4 @@
+import os
 import cv2
 import numpy as np
 from tensorflow.keras.models import load_model
@@ -20,7 +21,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(BASE_DIR, 'models', 'plant_disease_model_final.h5')
 TREATMENT_FILE_PATH = os.path.join(BASE_DIR, 'data', 'plant_disease_data.xlsx')
 IMG_SIZE = 224
-WEBSOCKET_PORT = 8765
+WEBSOCKET_HOST = os.environ.get('WEBSOCKET_HOST', '0.0.0.0')
+WEBSOCKET_PORT = int(os.environ.get('WEBSOCKET_PORT', 8765))
 NO_DETECTION_INTERVAL = 2.0  # Send no detection message every 2 seconds
 PING_TIMEOUT = 35  # Timeout for ping in seconds
 connected_clients = {}  # Changed to dict to store last ping time
@@ -244,7 +246,7 @@ async def main():
         # Create SSL context for secure WebSocket (wss://)
         server = await websockets.serve(
             handle_client,
-            "0.0.0.0",  # Listen on all network interfaces
+            WEBSOCKET_HOST,  # Listen on configured network interface
             WEBSOCKET_PORT,
             ping_interval=20,  # Send ping every 20 seconds
             ping_timeout=30,   # Wait 30 seconds for pong response
@@ -253,9 +255,9 @@ async def main():
             max_queue=32  # Limit message queue size
         )
         
-        logger.info(f"✅ WebSocket server running on ws://10.220.90.215:{WEBSOCKET_PORT}")
+        logger.info(f"✅ WebSocket server running on ws://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}")
         logger.info("💡 Connect to this server from your Flutter app using:")
-        logger.info(f"   ws://10.220.90.215:{WEBSOCKET_PORT}")
+        logger.info(f"   ws://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}")
 
         # Start the timeout checker
         timeout_checker = asyncio.create_task(check_client_timeouts())
@@ -301,7 +303,7 @@ async def main():
     finally:
         logger.info("🛑 Application exited cleanly.")
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

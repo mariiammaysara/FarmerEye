@@ -1,3 +1,4 @@
+import os
 import cv2
 import asyncio
 import websockets
@@ -5,8 +6,9 @@ import json
 import base64
 from picamera2 import Picamera2
 
-# WebSocket port
-WEBSOCKET_PORT = 8766
+# WebSocket host and port
+WEBSOCKET_HOST = os.environ.get("WEBSOCKET_HOST", "0.0.0.0")
+WEBSOCKET_PORT = int(os.environ.get("WEBSOCKET_PORT", 8766))
 connected_clients = set()
 
 async def handle_client(websocket, path="/"):
@@ -60,9 +62,9 @@ async def stream_camera():
 
 async def main():
     """Start WebSocket server and camera stream."""
-    server = await websockets.serve(handle_client, "0.0.0.0", WEBSOCKET_PORT)
+    server = await websockets.serve(handle_client, WEBSOCKET_HOST, WEBSOCKET_PORT)
     print(f"✅ WebSocket server started on port {WEBSOCKET_PORT}")
     await stream_camera()
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     asyncio.run(main())

@@ -1,3 +1,4 @@
+import os
 import cv2
 import numpy as np
 from tensorflow.keras.models import load_model
@@ -17,8 +18,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(BASE_DIR, 'models', 'plant_disease_model_final.h5')
 TREATMENT_FILE_PATH = os.path.join(BASE_DIR, 'data', 'plant_disease_data.xlsx')
 IMG_SIZE = 224 # Should match the model's expected input size
-WEBSOCKET_PORT = 8765
-WEBSOCKET_HOST = "0.0.0.0" # Listen on all available network interfaces
+WEBSOCKET_HOST = os.environ.get('WEBSOCKET_HOST', '0.0.0.0') # Listen on all available network interfaces
+WEBSOCKET_PORT = int(os.environ.get('WEBSOCKET_PORT', 8765))
 DETECTION_THRESHOLD = 0.98 # Minimum confidence for detection
 CAMERA_RESOLUTION = (640, 480)
 CAMERA_FRAMERATE = 20 # Target framerate
