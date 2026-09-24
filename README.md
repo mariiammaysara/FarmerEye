@@ -37,6 +37,48 @@ The companion cross-platform mobile application built with **Flutter** is develo
 - **Modular Architecture**: Decoupled codebase designed for scalability and maintainability.
 - **Local WebSocket Communication**: Asynchronous WebSocket communication ensuring low-latency data and video delivery between the edge device and connected clients on the local network.
 
+##  System Architecture
+
+The end-to-end dataflow strictly mirrors the active edge implementation ([src/combined_detection_stream.py](src/combined_detection_stream.py)):
+
+```mermaid
+graph TD
+    subgraph Hardware ["Edge Hardware (Raspberry Pi)"]
+        CAM["PiCamera2 Module (CSI Ribbon Cable)"]
+    end
+
+    subgraph EdgeService ["Python Edge Detection Service (src/combined_detection_stream.py)"]
+        CAP["Frame Capture (Picamera2.capture_array)"]
+        
+        subgraph StreamPipe ["Streaming Pipeline"]
+            ENC["JPEG Encode (cv2.imencode) & Base64"]
+            FRAME_MSG["camera_frame JSON Payload"]
+        end
+
+        subgraph InfPipe ["Inference & Diagnostic Pipeline"]
+            PREP["Preprocessing: Resize (224x224) & Normalize [/255]"]
+            CNN["CNN Classifier (plant_disease_model_final.h5 / TFLite)"]
+            THRESH{"Confidence >= Threshold?"}
+            LOOKUP["Treatment Lookup (data/plant_disease_data.xlsx)"]
+            ALERT_MSG["detection JSON (Bilingual EN/AR + Confidence)"]
+            NO_DET["no_detection Heartbeat"]
+        end
+
+        WSS["Asyncio WebSocket Server (Port 8765)"]
+    end
+
+    subgraph Client ["Client Device (Local Network)"]
+        APP["Flutter Mobile Application (Real-Time Feed & Alerts)"]
+    end
+
+    CAM --> CAP
+    CAP --> ENC --> FRAME_MSG --> WSS
+    CAP --> PREP --> CNN --> THRESH
+    THRESH -- "Yes (Disease Detected)" --> LOOKUP --> ALERT_MSG --> WSS
+    THRESH -- "No Detection" --> NO_DET --> WSS
+    WSS <-->|"ws://<IP>:8765 (Low-Latency TCP)"| APP
+```
+
 ##  Dataset
 
 The plant disease detection model is trained on **39,776 validated images** across **25 classes** spanning 5 crops (Cotton, Tomato, Potato, Pepper, and Strawberry).
@@ -151,12 +193,14 @@ FarmerEye/
 ├── notebooks/
 │   └── research_and_training.ipynb  # ML development and training pipeline
 ├── src/
-│   ├── app.py                       # Main application entry point
-│   ├── class_names.py               # Single source of truth for classes and normalization
-│   ├── combined_detection_stream.py # Combined UI and streaming logic
-│   ├── real_time_detection.py       # Core inference and hardware logic
-│   └── raspberry_pi_camera_stream.py# Low-level camera streaming service
-├── tests/                           # System validation and testing (planned)
+│   ├── app.py                       # Training script ported from research notebook
+│   ├── class_names.py               # Single source of truth for 25 classes and normalization
+│   ├── combined_detection_stream.py # Combined camera streaming, detection, and WebSocket service
+│   ├── convert_tflite.py            # Model conversion utility (float16/dynamic quantization)
+│   ├── evaluate.py                  # Offline evaluation script (.h5 and .tflite metrics)
+│   ├── raspberry_pi_camera_stream.py# Standalone camera streaming service
+│   └── real_time_detection.py       # Detection service with thresholding and treatments
+├── tests/                           # Hardware-mocked pytest test suite (27+ tests)
 ├── requirements.txt                 # Runtime dependencies (Raspberry Pi)
 ├── requirements-dev.txt             # Development, training, and testing dependencies
 └── README.md                        # Project documentation
@@ -186,18 +230,37 @@ FarmerEye/
      pip install -r requirements-dev.txt
      ```
 
-##  Hardware Setup
+##  Hardware Setup & Wiring / Pinout
 
-1. **Camera Configuration**:
-   - Enable the camera interface on Raspberry Pi (`raspi-config`).
-   - Install `Picamera2` using the system package manager on Raspberry Pi OS (do **not** install via `pip`):
-     ```bash
-     sudo apt update && sudo apt install -y python3-picamera2
-     ```
-2. **Motor Driver**:
-   - Connect the motor driver to the GPIO pins as configured in the source code.
-3. **Power Management**:
-   - Ensure stable power supply for both the Raspberry Pi and the motor chassis.
+### 1. Camera Configuration
+- Connect the Raspberry Pi Camera Module to the **CSI (Camera Serial Interface)** port using a 15-pin ribbon cable.
+- Enable the camera interface on Raspberry Pi (`sudo raspi-config` -> *Interface Options* -> *Camera* -> *Enable*).
+- Install `Picamera2` using the system package manager on Raspberry Pi OS (do **not** install via `pip`):
+  ```bash
+  sudo apt update && sudo apt install -y python3-picamera2
+  ```
+
+### 2. Wiring & Pinout Table
+
+The table below documents every physical pin and interface used across the edge vehicle setup.
+
+> [!IMPORTANT]
+> **GPIO Implementation Notice**: The active codebase in `src/` implements video streaming, AI disease inference, and WebSocket communication, but **does not contain motor driver GPIO control code**. The pin assignments below reflect the project's standard 4-pin L298N H-Bridge mapping defined and tested in [tests/test_motor.py](tests/test_motor.py). Pin connections marked **verify on hardware** must be verified on the physical chassis before running any motor scripts.
+
+| Interface / Header | BCM GPIO | Physical Pin | Target Component & Pin | Functional Role | Source File & Line | Status |
+|---|:---:|:---:|---|---|---|:---:|
+| **CSI Port** | — | 15-pin Ribbon | PiCamera2 / CSI Camera | Video capture stream | [src/combined_detection_stream.py:13](src/combined_detection_stream.py#L13) | **Confirmed in code** |
+| **GPIO Header** | `GPIO 17` | Pin 11 | L298N `IN1` | Left Motor Forward | [tests/test_motor.py:12](tests/test_motor.py#L12) | *Verify on hardware (no GPIO code in src/)* |
+| **GPIO Header** | `GPIO 27` | Pin 13 | L298N `IN2` | Left Motor Backward | [tests/test_motor.py:13](tests/test_motor.py#L13) | *Verify on hardware (no GPIO code in src/)* |
+| **GPIO Header** | `GPIO 22` | Pin 15 | L298N `IN3` | Right Motor Forward | [tests/test_motor.py:14](tests/test_motor.py#L14) | *Verify on hardware (no GPIO code in src/)* |
+| **GPIO Header** | `GPIO 23` | Pin 16 | L298N `IN4` | Right Motor Backward | [tests/test_motor.py:15](tests/test_motor.py#L15) | *Verify on hardware (no GPIO code in src/)* |
+| **Power Header** | `5V` | Pin 2 or 4 | L298N `5V Logic` | Logic Power supply for driver | — | *Verify on hardware* |
+| **Ground Header** | `GND` | Pin 6 (or any GND) | L298N `GND` | Common ground reference | — | *Verify on hardware* |
+| **Chassis Battery** | — | External Terminal | L298N `12V / VCC` | Motor driving power (7V–12V DC) | — | *Verify on hardware* |
+
+### 3. Power Management
+- Ensure a stable 5V / 3A power supply (e.g. dedicated power bank or buck converter) for the Raspberry Pi.
+- Power the L298N motor driver from an independent chassis battery pack (e.g. 2x 18650 Li-ion cells in series for ~7.4V–8.4V), with common grounds (GND) tied to the Raspberry Pi.
 
 ##  Usage
 
