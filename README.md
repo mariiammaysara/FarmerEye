@@ -1,65 +1,111 @@
 <div align="center">
-  <h1> Farmer Eye Robotic Car – Graduation Project</h1>
+  <h1>🌾 Farmer Eye Robotic Car</h1>
   <h3>Smart Vehicle for Crops Health Detection and Classification Using AI-powered and IoT</h3>
+  
   <p align="center">
     <a href="https://github.com/mariiammaysara/FarmerEye/actions/workflows/tests.yml">
-      <img src="https://github.com/mariiammaysara/FarmerEye/actions/workflows/tests.yml/badge.svg" alt="Tests">
+      <img src="https://github.com/mariiammaysara/FarmerEye/actions/workflows/tests.yml/badge.svg" alt="Tests Status">
+    </a>
+    <img src="https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white" alt="Python 3.10+">
+    <img src="https://img.shields.io/badge/TensorFlow-2.15%2B-orange?logo=tensorflow&logoColor=white" alt="TensorFlow">
+    <img src="https://img.shields.io/badge/Platform-Raspberry%20Pi%204-red?logo=raspberrypi&logoColor=white" alt="Raspberry Pi">
+    <a href="LICENSE">
+      <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License">
     </a>
   </p>
+
   <p align="center">
-    <img src="docs/assets/robotic_car_image.jpg" width="400" height="300" alt="Farmer Eye Robotic Car">
+    <img src="docs/assets/robotic_car_image.jpg" width="460" alt="Farmer Eye Robotic Car">
+  </p>
+
+  <p align="center">
+    <b>An end-to-end precision agriculture system combining edge AI, mobile robotics, and IoT to detect crop diseases in real time.</b>
   </p>
 </div>
 
 ---
 
-##  Project Overview
+## 📖 Table of Contents
 
-**Farmer Eye** (Registered Title: *Smart Vehicle for Crops Health Detection and Classification Using AI-powered and IoT*) is an end-to-end AI-IoT system designed to modernize agriculture by automating plant disease diagnostics. The system integrates a **remote-controlled robotic car**, high-performance **Deep Learning models**, and a **Raspberry Pi-powered edge device** to patrol fields and identify crop diseases in real-time.
+- [Project Overview](#-project-overview)
+- [Documentation Hub](#-documentation-hub)
+- [Key Features](#-key-features)
+- [System Architecture](#-system-architecture)
+- [Quick Start Guide](#-quick-start-guide)
+- [Benchmark Results](#-benchmark-results)
+- [Hardware & Wiring Summary](#-hardware--wiring-summary)
+- [Repository Structure](#-repository-structure)
+- [Limitations & Future Work](#-limitations--future-work)
+- [License & Team](#-license--team)
 
-By bridging the gap between hardware and software, Farmer Eye provides farmers with instant diagnostic feedback and localized treatment recommendations (available in English and Arabic) to prevent crop loss and optimize harvest health.
+---
 
-##  Mobile Application
+## 🌟 Project Overview
 
-The companion cross-platform mobile application built with **Flutter** is developed separately and is not included in this repository. It serves as the central hub for monitoring and control:
+**Farmer Eye** (Registered Academic Title: *Smart Vehicle for Crops Health Detection and Classification Using AI-powered and IoT*) is an edge-AI IoT platform developed as a graduation engineering project. It automates agricultural field inspection by deploying a mobile rover equipped with a high-definition camera and an on-device deep learning classifier.
 
-- 🎥 **Real-Time Live Feed**: Low-latency video streaming from the robotic car's onboard camera.
-- 🔔 **Instant Alerts**: Real-time WebSocket detection messages sent the moment a plant disease is detected, including classification and confidence metrics.
-- 💊 **Treatment Intelligence**: Integrated pharmaceutical database providing clinical diagnostics and treatment protocols.
-- 🕹️ **Remote Telemetry**: Real-time status monitoring for hardware health and connectivity.
+When the vehicle patrols a field, leaves are evaluated continuously. If a disease is detected, the system queries a localized agricultural knowledge base and broadcasts instant diagnostic telemetry—including **English and Arabic treatment guidelines**—over low-latency WebSockets to an operator's mobile application.
 
-##  System Features
+```
+       Field Inspection                   Edge Intelligence                  Farmer Decision Support
+ ┌───────────────────────────┐      ┌───────────────────────────┐      ┌─────────────────────────────────┐
+ │   Robotic Rover Chassis   │ ───> │  Raspberry Pi 4 Processor │ ───> │ Flutter Mobile Dashboard (App)  │
+ │  PiCamera2 (CSI Interface)│      │  Custom 5-Block CNN Model │      │ Real-time Stream & EN/AR Advice │
+ └───────────────────────────┘      └───────────────────────────┘      └─────────────────────────────────┘
+```
 
-- **Real-Time Edge Inference**: Continuous monitoring and detection powered by localized processing on Raspberry Pi.
-- **High-Accuracy CNN**: Fine-tuned Convolutional Neural Networks optimized for high-precision identification across various plant classes.
-- **Multi-Crop Support**: Robust detection for Cotton, Tomato, Potato, Pepper, and Strawberry.
-- **Bi-Lingual Diagnostics**: Comprehensive treatment guidance in both English and Arabic.
-- **Modular Architecture**: Decoupled codebase designed for scalability and maintainability.
-- **Local WebSocket Communication**: Asynchronous WebSocket communication ensuring low-latency data and video delivery between the edge device and connected clients on the local network.
+---
 
-##  System Architecture
+## 📚 Documentation Hub
 
-The end-to-end dataflow strictly mirrors the active edge implementation ([src/combined_detection_stream.py](src/combined_detection_stream.py)):
+For in-depth explanations, schematics, tutorials, and protocol specifications, visit our detailed documentation guides:
+
+| Guide | Description |
+|---|---|
+| 🏗️ [**System Architecture & Concurrency**](docs/architecture.md) | Asynchronous edge loop, streaming pipeline, and detailed sequence diagrams. |
+| 🧠 [**Machine Learning & Computer Vision**](docs/machine-learning.md) | 5-block CNN architecture, training history, evaluation metrics, and TFLite quantization. |
+| 🔌 [**Hardware Setup & Wiring Guide**](docs/hardware-setup.md) | Bill of materials, L298N pinout table, power regulation, and Raspberry Pi OS setup. |
+| 📡 [**WebSocket API & Protocol Specification**](docs/api-reference.md) | Complete JSON message schemas, event payloads, and Flutter/Dart client integration code. |
+| 🛠️ [**Developer & Testing Guide**](docs/developer-guide.md) | Local environment setup, running the hardware-mocked pytest suite, and CI workflows. |
+| 📊 [**Dataset Documentation (Data Card)**](data/README.md) | 39,776 image distribution, 25 class breakdowns, and Kaggle download instructions. |
+
+---
+
+## ⚡ Key Features
+
+- **Edge-Native Inference**: Powered directly on a Raspberry Pi 4 without requiring cloud APIs or remote servers.
+- **High-Accuracy CNN**: Custom 5-block Convolutional Neural Network trained from scratch, achieving **97.95% accuracy** across 25 crop conditions.
+- **Multi-Crop Diagnostics**: Detects pathology across 5 key crops: **Cotton, Tomato, Potato, Pepper, and Strawberry**.
+- **Bilingual Actionable Advice**: Instant pharmaceutical treatment protocols in both **English and Arabic** fetched from an integrated database.
+- **Low-Latency Streaming**: Asynchronous WebSocket streaming (~20 FPS) over local Wi-Fi with non-blocking diagnostic interrupts.
+- **Hardware-Free Laptop Development**: Complete test suite with virtual stubs (`RPi.GPIO`, `picamera2`) allowing full unit testing on standard laptops.
+- **TensorFlow Lite Ready**: Built-in export tools supporting Float16 and 8-bit dynamic quantization for reduced memory footprint.
+
+---
+
+## 🏗️ System Architecture
+
+The following diagram illustrates the active dataflow implemented in [src/combined_detection_stream.py](src/combined_detection_stream.py):
 
 ```mermaid
 graph TD
-    subgraph Hardware ["Edge Hardware (Raspberry Pi)"]
+    subgraph Hardware ["Edge Hardware (Raspberry Pi 4)"]
         CAM["PiCamera2 Module (CSI Ribbon Cable)"]
     end
 
-    subgraph EdgeService ["Python Edge Detection Service (src/combined_detection_stream.py)"]
+    subgraph EdgeService ["Edge Detection Service (src/combined_detection_stream.py)"]
         CAP["Frame Capture (Picamera2.capture_array)"]
         
-        subgraph StreamPipe ["Streaming Pipeline"]
+        subgraph StreamPipe ["Streaming Pipeline (~20 FPS)"]
             ENC["JPEG Encode (cv2.imencode) & Base64"]
             FRAME_MSG["camera_frame JSON Payload"]
         end
 
-        subgraph InfPipe ["Inference & Diagnostic Pipeline"]
+        subgraph InfPipe ["Inference & Diagnostic Pipeline (2s Cooldown)"]
             PREP["Preprocessing: Resize (224x224) & Normalize [/255]"]
             CNN["CNN Classifier (plant_disease_model_final.h5 / TFLite)"]
-            THRESH{"Confidence >= Threshold?"}
-            LOOKUP["Treatment Lookup (data/plant_disease_data.xlsx)"]
+            THRESH{"Confidence >= 98%?"}
+            LOOKUP["Bilingual Treatment Lookup (data/plant_disease_data.xlsx)"]
             ALERT_MSG["detection JSON (Bilingual EN/AR + Confidence)"]
             NO_DET["no_detection Heartbeat"]
         end
@@ -67,273 +113,232 @@ graph TD
         WSS["Asyncio WebSocket Server (Port 8765)"]
     end
 
-    subgraph Client ["Client Device (Local Network)"]
-        APP["Flutter Mobile Application (Real-Time Feed & Alerts)"]
+    subgraph Client ["Operator Mobile Device (Local Wi-Fi)"]
+        APP["Flutter Mobile App (Live Video Feed & Alert Popups)"]
     end
 
     CAM --> CAP
     CAP --> ENC --> FRAME_MSG --> WSS
     CAP --> PREP --> CNN --> THRESH
     THRESH -- "Yes (Disease Detected)" --> LOOKUP --> ALERT_MSG --> WSS
-    THRESH -- "No Detection" --> NO_DET --> WSS
+    THRESH -- "No Detection / Healthy" --> NO_DET --> WSS
     WSS <-->|"ws://<IP>:8765 (Low-Latency TCP)"| APP
 ```
 
-##  Dataset
+---
 
-The plant disease detection model is trained on **39,776 validated images** across **25 classes** spanning 5 crops (Cotton, Tomato, Potato, Pepper, and Strawberry).
+## 🚀 Quick Start Guide
 
-- **Sources**:
-  - **PlantVillage Dataset**: Kaggle dataset ([KAGGLE_URL]), original repository [spMohanty/PlantVillage-Dataset](https://github.com/spMohanty/PlantVillage-Dataset), and reference paper ([Hughes & Salathé, 2015](https://arxiv.org/abs/1511.08060)).
-  - **Additional Real-World Images** (Cotton & Field subsets): [DESCRIBE SOURCE + COUNT, or write "TBD"] — TBD.
-- **Data Card**: Refer to the comprehensive [data/README.md](data/README.md) for full dataset specifications, split distributions (train 25,456 / val 6,365 / test 7,955), class lists, and download instructions.
+### 1. Clone & Set Up Virtual Environment
 
-##  Results
+```bash
+git clone https://github.com/mariiammaysara/FarmerEye.git
+cd FarmerEye
 
-The evaluation metrics below were extracted directly from the executed research and training pipeline ([notebooks/research_and_training.ipynb](notebooks/research_and_training.ipynb)):
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# Windows (PowerShell):
+venv\Scripts\Activate.ps1
+# Linux / macOS:
+source venv/bin/activate
+```
+
+### 2. Install Dependencies
+
+Choose based on your deployment target:
+
+- **On a Development Laptop (Testing & Evaluation)**:
+  ```bash
+  pip install -r requirements-dev.txt
+  ```
+- **On the Raspberry Pi (Edge Runtime)**:
+  ```bash
+  # Install native camera bindings
+  sudo apt update && sudo apt install -y python3-picamera2
+  # Install Python runtime packages
+  pip install -r requirements.txt
+  ```
+
+### 3. Run Automated Tests (No Hardware Required)
+
+Verify that the image preprocessing, message serialization, motor abstractions, and treatment lookup are passing:
+
+```bash
+pytest -v
+```
+
+### 4. Run on Raspberry Pi
+
+To launch the real-time detection and camera stream server on the edge device:
+
+```bash
+python src/combined_detection_stream.py
+```
+*The server will start listening for WebSocket client connections on `ws://0.0.0.0:8765`.*
+
+### 5. Offline Model Evaluation & TFLite Export
+
+Evaluate any model checkpoint on an unseen test dataset:
+```bash
+python src/evaluate.py --model models/plant_disease_model_final.h5 --data path/to/test_dataset
+```
+
+Convert the Keras model to an optimized TensorFlow Lite format:
+```bash
+python src/convert_tflite.py --quantization float16
+```
+
+---
+
+## 📊 Benchmark Results
+
+The model was evaluated against an unseen **7,955-image holdout test set** (20% stratified sample of the 39,776-image dataset):
+
+- **Overall Test Accuracy**: **97.95%** (`0.979510`)
+- **Test Categorical Loss**: **0.0787**
+- **Macro Average F1-Score**: **0.98**
+- **Weighted Average F1-Score**: **0.98**
 
 > [!NOTE]
-> Metrics come from a random hold-out split of the dataset, measured on a workstation, not on the Raspberry Pi, and real-field performance was not evaluated.
+> Metrics were measured offline on a workstation using a random hold-out split. Real-field performance under dynamic outdoor lighting, soil clutter, and multi-leaf occlusion was not evaluated and may exhibit a domain gap.
 
-* **Dataset source**: PlantVillage (Kaggle / GitHub) and additional real-world field images (Cotton & field subsets; source details TBD).
-* **Dataset Partitioning (Two-Stage Stratified Split)**:
-  * **Training Set**: 25,456 images (64.0%)
-  * **Validation Set**: 6,365 images (16.0%)
-  * **Test Holdout Set**: 7,955 images (20.0%)
-  * **Total Validated**: 39,776 images (1 corrupted image discarded during verification)
-* **Overall Test Set Evaluation (7,955 test images)**:
-  * **Test Accuracy**: **97.95%** (`0.979510`)
-  * **Test Loss**: **0.0787** (`0.078732`)
-  * **Macro Average**: Precision = `0.97`, Recall = `0.98`, F1-Score = `0.98`
-  * **Weighted Average**: Precision = `0.98`, Recall = `0.98`, F1-Score = `0.98`
+### Per-Class Performance (Holdout Test Set)
 
-### Per-Class Performance (Classification Report)
+<details open>
+<summary><b>Click to expand full 25-class classification report</b></summary>
 
-The following table reflects the exact classification report generated from the holdout test set (Cell 26):
+| Class Index | Crop | Condition / Disease Name | Precision | Recall | F1-Score | Test Support |
+|:---:|:---:|---|:---:|:---:|:---:|:---:|
+| 0 | Cotton | `Aphids_cotton` | 0.98 | 0.98 | 0.98 | 449 |
+| 1 | Cotton | `Army worm_cotton` | 0.98 | 0.99 | 0.98 | 448 |
+| 2 | Cotton | `Bacterial blight_cotton` | 0.95 | 0.95 | 0.95 | 529 |
+| 3 | Cotton | `Healthy_cotton` | 0.98 | 0.99 | 0.99 | 533 |
+| 4 | Pepper | `Pepper_bell__bacterial_spot` | 0.99 | 0.92 | 0.96 | 213 |
+| 5 | Pepper | `Pepper_bell__healthy` | 0.98 | 0.96 | 0.97 | 308 |
+| 6 | Potato | `Potato___Early_blight` | 0.97 | 0.94 | 0.95 | 219 |
+| 7 | Potato | `Potato___Late_blight` | 0.95 | 0.92 | 0.94 | 219 |
+| 8 | Potato | `Potato___healthy` | 0.91 | 1.00 | 0.95 | 30 |
+| 9 | Cotton | `Powdery mildew_cotton` | 0.99 | 0.99 | 0.99 | 448 |
+| 10 | Strawberry | `Strawberry___Leaf_scorch` | 1.00 | 1.00 | 1.00 | 222 |
+| 11 | Strawberry | `Strawberry___healthy` | 0.99 | 1.00 | 0.99 | 91 |
+| 12 | Cotton | `Target spot_cotton` | 0.94 | 0.97 | 0.95 | 447 |
+| 13 | Tomato | `Tomato___Bacterial_spot` | 0.99 | 0.99 | 0.99 | 426 |
+| 14 | Tomato | `Tomato___Early_blight` | 0.98 | 0.94 | 0.96 | 200 |
+| 15 | Tomato | `Tomato___Late_blight` | 0.99 | 0.98 | 0.98 | 382 |
+| 16 | Tomato | `Tomato___Leaf_Mold` | 1.00 | 1.00 | 1.00 | 190 |
+| 17 | Tomato | `Tomato___Septoria_leaf_spot` | 0.99 | 1.00 | 0.99 | 355 |
+| 18 | Tomato | `Tomato___Spider_mites Two-spotted_spider_mite` | 0.97 | 0.99 | 0.98 | 335 |
+| 19 | Tomato | `Tomato___Target_Spot` | 0.98 | 0.97 | 0.98 | 281 |
+| 20 | Tomato | `Tomato___Tomato_Yellow_Leaf_Curl_Virus` | 1.00 | 1.00 | 1.00 | 1072 |
+| 21 | Tomato | `Tomato___Tomato_mosaic_virus` | 1.00 | 1.00 | 1.00 | 75 |
+| 22 | Tomato | `Tomato___healthy` | 1.00 | 1.00 | 1.00 | 318 |
+| 23 | Cotton | `cotton_curl_virus` | 0.90 | 0.99 | 0.94 | 82 |
+| 24 | Cotton | `cotton_fussarium_wilt` | 0.94 | 1.00 | 0.97 | 83 |
+| — | — | **Overall Accuracy** | — | — | **0.98** | **7,955** |
+| — | — | **Macro Average** | **0.97** | **0.98** | **0.98** | **7,955** |
+| — | — | **Weighted Average** | **0.98** | **0.98** | **0.98** | **7,955** |
 
-| Class Index | Condition / Disease Name | Precision | Recall | F1-Score | Support |
-|:---:|---|:---:|:---:|:---:|:---:|
-| 0 | `Aphids_cotton` | 0.98 | 0.98 | 0.98 | 449 |
-| 1 | `Army worm_cotton` | 0.98 | 0.99 | 0.98 | 448 |
-| 2 | `Bacterial blight_cotton` | 0.95 | 0.95 | 0.95 | 529 |
-| 3 | `Healthy_cotton` | 0.98 | 0.99 | 0.99 | 533 |
-| 4 | `Pepper_bell__bacterial_spot` | 0.99 | 0.92 | 0.96 | 213 |
-| 5 | `Pepper_bell__healthy` | 0.98 | 0.96 | 0.97 | 308 |
-| 6 | `Potato___Early_blight` | 0.97 | 0.94 | 0.95 | 219 |
-| 7 | `Potato___Late_blight` | 0.95 | 0.92 | 0.94 | 219 |
-| 8 | `Potato___healthy` | 0.91 | 1.00 | 0.95 | 30 |
-| 9 | `Powdery mildew_cotton` | 0.99 | 0.99 | 0.99 | 448 |
-| 10 | `Strawberry___Leaf_scorch` | 1.00 | 1.00 | 1.00 | 222 |
-| 11 | `Strawberry___healthy` | 0.99 | 1.00 | 0.99 | 91 |
-| 12 | `Target spot_cotton` | 0.94 | 0.97 | 0.95 | 447 |
-| 13 | `Tomato___Bacterial_spot` | 0.99 | 0.99 | 0.99 | 426 |
-| 14 | `Tomato___Early_blight` | 0.98 | 0.94 | 0.96 | 200 |
-| 15 | `Tomato___Late_blight` | 0.99 | 0.98 | 0.98 | 382 |
-| 16 | `Tomato___Leaf_Mold` | 1.00 | 1.00 | 1.00 | 190 |
-| 17 | `Tomato___Septoria_leaf_spot` | 0.99 | 1.00 | 0.99 | 355 |
-| 18 | `Tomato___Spider_mites Two-spotted_spider_mite` | 0.97 | 0.99 | 0.98 | 335 |
-| 19 | `Tomato___Target_Spot` | 0.98 | 0.97 | 0.98 | 281 |
-| 20 | `Tomato___Tomato_Yellow_Leaf_Curl_Virus` | 1.00 | 1.00 | 1.00 | 1072 |
-| 21 | `Tomato___Tomato_mosaic_virus` | 1.00 | 1.00 | 1.00 | 75 |
-| 22 | `Tomato___healthy` | 1.00 | 1.00 | 1.00 | 318 |
-| 23 | `cotton_curl_virus` | 0.90 | 0.99 | 0.94 | 82 |
-| 24 | `cotton_fussarium_wilt` | 0.94 | 1.00 | 0.97 | 83 |
-| — | **Accuracy** | — | — | **0.98** | **7,955** |
-| — | **Macro Average** | **0.97** | **0.98** | **0.98** | **7,955** |
-| — | **Weighted Average** | **0.98** | **0.98** | **0.98** | **7,955** |
-
-### Training History & Confusion Matrix
+</details>
 
 <div align="center">
-  <p><b>Training & Validation Accuracy / Loss Curves (50 Epochs)</b></p>
-  <img src="docs/assets/results/training_validation_curves.png" alt="Training and Validation Curves" width="800">
-  <br><br>
-  <p><b>Test Set Confusion Matrix</b></p>
-  <img src="docs/assets/results/confusion_matrix.png" alt="Confusion Matrix" width="650">
+  <br>
+  <img src="docs/assets/results/training_validation_curves.png" alt="Training and Validation Curves" width="48%">
+  <img src="docs/assets/results/confusion_matrix.png" alt="Confusion Matrix" width="48%">
 </div>
 
-> [!WARNING]
-> **Known Issue**: The notebook's fine-tuning cell did not execute (`initial_epoch >= epochs` because `epochs_finetune=10` was less than `history.epoch[-1]=49`). The reported fine-tuned metrics are therefore identical to the initial 50-epoch trained model.
+---
 
-##  Tech Stack
+## 🔌 Hardware & Wiring Summary
 
-###  Artificial Intelligence & Data
-- **Frameworks**: TensorFlow, Keras, Scikit-learn
-- **Libraries**: NumPy, Pandas, OpenCV, PIL (Pillow)
-- **Deep Learning**: Convolutional Neural Networks (CNN)
+> [!IMPORTANT]
+> **GPIO Status**: The active codebase in `src/` implements video streaming, AI inference, and WebSockets. The pin assignments below represent the project's standard 4-pin L298N H-Bridge reference mapping tested in [tests/test_motor.py](tests/test_motor.py). Pin connections marked **verify on hardware** should be validated on the physical car chassis before deployment.
 
-###  Hardware & IoT
-- **Compute**: Raspberry Pi
-- **Camera**: PiCamera2 / HD Modules
-- **Mechanics**: Robotic Car Chassis, L298N Motor Drivers
-- **Connectivity**: WebSockets (Asyncio)
+| Interface / Header | BCM GPIO | Physical Header Pin | Target Component & Pin | Functional Role | Verification Status |
+|---|:---:|:---:|---|---|:---:|
+| **CSI Camera Port** | — | 15-pin Ribbon | PiCamera2 Module | Live camera capture | **Confirmed in code** |
+| **GPIO Header** | `GPIO 17` | Pin 11 | L298N `IN1` | Left Motor Forward | *Verify on hardware* |
+| **GPIO Header** | `GPIO 27` | Pin 13 | L298N `IN2` | Left Motor Backward | *Verify on hardware* |
+| **GPIO Header** | `GPIO 22` | Pin 15 | L298N `IN3` | Right Motor Forward | *Verify on hardware* |
+| **GPIO Header** | `GPIO 23` | Pin 16 | L298N `IN4` | Right Motor Backward | *Verify on hardware* |
+| **Power Header** | `5V` | Pin 2 or 4 | L298N `5V Logic` | Logic rail for driver | *Verify on hardware* |
+| **Ground Header** | `GND` | Pin 6 | L298N `GND` | Common ground reference | *Verify on hardware* |
+| **Chassis Battery** | — | External Terminal | L298N `12V / VCC` | 7.4V–8.4V motor drive power | *Verify on hardware* |
 
-###  Mobile & Frontend
-- **Framework**: Flutter (Dart)
-- **Communication**: WebSocket Client
+*For complete schematics, battery isolation, and power safety, see the [Hardware Setup Guide](docs/hardware-setup.md).*
 
-###  Backend & Infrastructure
-- **Server**: Python-based WebSocket Server
-- **Database**: Excel/CSV-based treatment reference (Openpyxl)
+---
 
-##  Project Structure
+## 📁 Repository Structure
 
 ```text
 FarmerEye/
+├── .github/
+│   └── workflows/tests.yml          # GitHub Actions CI workflow (Python 3.10, pytest, pip cache)
 ├── data/
-│   ├── plant_disease_data.xlsx      # Database for treatments and diagnostics
-│   └── README.md                    # Dataset card and documentation
+│   ├── plant_disease_data.xlsx      # Bilingual diagnostic and treatment database
+│   └── README.md                    # Comprehensive dataset card and Kaggle guide
 ├── docs/
-│   └── assets/
-│       ├── results/                 # Extracted training curves and confusion matrix
-│       └── robotic_car_image.jpg    # Project visual assets
+│   ├── api-reference.md             # WebSocket protocol specs and Flutter sample code
+│   ├── architecture.md              # System design, dataflow, and concurrency model
+│   ├── developer-guide.md           # Setup, hardware-mocked testing, and coding standards
+│   ├── hardware-setup.md            # Hardware BOM, wiring diagrams, and OS configuration
+│   ├── machine-learning.md          # 5-block CNN architecture, benchmarks, and TFLite
+│   └── assets/                      # Diagrams, confusion matrix, curves, and car imagery
 ├── models/
-│   ├── fine_tuned_model.h5          # Optimized CNN model
-│   └── plant_disease_model_final.h5 # Final trained model
+│   ├── fine_tuned_model.h5          # Model checkpoint
+│   └── plant_disease_model_final.h5 # Final trained Keras H5 model (4.86 MB)
 ├── notebooks/
-│   └── research_and_training.ipynb  # ML development and training pipeline
+│   └── research_and_training.ipynb  # Complete research, training, and evaluation notebook
 ├── src/
 │   ├── app.py                       # Training script ported from research notebook
 │   ├── class_names.py               # Single source of truth for 25 classes and normalization
 │   ├── combined_detection_stream.py # Combined camera streaming, detection, and WebSocket service
-│   ├── convert_tflite.py            # Model conversion utility (float16/dynamic quantization)
+│   ├── convert_tflite.py            # Model conversion utility (Float16/Dynamic quantization)
 │   ├── evaluate.py                  # Offline evaluation script (.h5 and .tflite metrics)
-│   ├── raspberry_pi_camera_stream.py# Standalone camera streaming service
+│   ├── raspberry_pi_camera_stream.py# Standalone low-level camera streaming service
 │   └── real_time_detection.py       # Detection service with thresholding and treatments
-├── tests/                           # Hardware-mocked pytest test suite (27+ tests)
-├── requirements.txt                 # Runtime dependencies (Raspberry Pi)
+├── tests/
+│   ├── conftest.py                  # Pytest hardware stubs (RPi.GPIO, gpiozero, picamera2)
+│   ├── test_convert_tflite.py       # Tests for TFLite converter and CLI arguments
+│   ├── test_evaluate.py             # Tests for offline model evaluation logic
+│   ├── test_model.py                # Tests for model presence and inference shape
+│   ├── test_motor.py                # Tests for L298N 4-pin motor state mapping
+│   ├── test_preprocessing.py        # Tests for image normalization and encoding
+│   ├── test_treatment_lookup.py     # Tests for tolerant bilingual treatment resolution
+│   └── test_websocket.py            # Tests for WebSocket message JSON schemas
+├── requirements.txt                 # Edge runtime dependencies (Raspberry Pi)
 ├── requirements-dev.txt             # Development, training, and testing dependencies
-└── README.md                        # Project documentation
+├── LICENSE                          # MIT License
+└── README.md                        # Project documentation entry point
 ```
-
-##  Installation
-
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/mariiammaysara/FarmerEye.git
-   cd FarmerEye
-   ```
-
-2. **Environment Setup**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # Windows: venv\Scripts\activate
-   ```
-
-3. **Install Dependencies**
-   - **For Runtime (Raspberry Pi edge inference & streaming)**:
-     ```bash
-     pip install -r requirements.txt
-     ```
-   - **For Development & Training (notebook, evaluation, testing)**:
-     ```bash
-     pip install -r requirements-dev.txt
-     ```
-
-##  Hardware Setup & Wiring / Pinout
-
-### 1. Camera Configuration
-- Connect the Raspberry Pi Camera Module to the **CSI (Camera Serial Interface)** port using a 15-pin ribbon cable.
-- Enable the camera interface on Raspberry Pi (`sudo raspi-config` -> *Interface Options* -> *Camera* -> *Enable*).
-- Install `Picamera2` using the system package manager on Raspberry Pi OS (do **not** install via `pip`):
-  ```bash
-  sudo apt update && sudo apt install -y python3-picamera2
-  ```
-
-### 2. Wiring & Pinout Table
-
-The table below documents every physical pin and interface used across the edge vehicle setup.
-
-> [!IMPORTANT]
-> **GPIO Implementation Notice**: The active codebase in `src/` implements video streaming, AI disease inference, and WebSocket communication, but **does not contain motor driver GPIO control code**. The pin assignments below reflect the project's standard 4-pin L298N H-Bridge mapping defined and tested in [tests/test_motor.py](tests/test_motor.py). Pin connections marked **verify on hardware** must be verified on the physical chassis before running any motor scripts.
-
-| Interface / Header | BCM GPIO | Physical Pin | Target Component & Pin | Functional Role | Source File & Line | Status |
-|---|:---:|:---:|---|---|---|:---:|
-| **CSI Port** | — | 15-pin Ribbon | PiCamera2 / CSI Camera | Video capture stream | [src/combined_detection_stream.py:13](src/combined_detection_stream.py#L13) | **Confirmed in code** |
-| **GPIO Header** | `GPIO 17` | Pin 11 | L298N `IN1` | Left Motor Forward | [tests/test_motor.py:12](tests/test_motor.py#L12) | *Verify on hardware (no GPIO code in src/)* |
-| **GPIO Header** | `GPIO 27` | Pin 13 | L298N `IN2` | Left Motor Backward | [tests/test_motor.py:13](tests/test_motor.py#L13) | *Verify on hardware (no GPIO code in src/)* |
-| **GPIO Header** | `GPIO 22` | Pin 15 | L298N `IN3` | Right Motor Forward | [tests/test_motor.py:14](tests/test_motor.py#L14) | *Verify on hardware (no GPIO code in src/)* |
-| **GPIO Header** | `GPIO 23` | Pin 16 | L298N `IN4` | Right Motor Backward | [tests/test_motor.py:15](tests/test_motor.py#L15) | *Verify on hardware (no GPIO code in src/)* |
-| **Power Header** | `5V` | Pin 2 or 4 | L298N `5V Logic` | Logic Power supply for driver | — | *Verify on hardware* |
-| **Ground Header** | `GND` | Pin 6 (or any GND) | L298N `GND` | Common ground reference | — | *Verify on hardware* |
-| **Chassis Battery** | — | External Terminal | L298N `12V / VCC` | Motor driving power (7V–12V DC) | — | *Verify on hardware* |
-
-### 3. Power Management
-- Ensure a stable 5V / 3A power supply (e.g. dedicated power bank or buck converter) for the Raspberry Pi.
-- Power the L298N motor driver from an independent chassis battery pack (e.g. 2x 18650 Li-ion cells in series for ~7.4V–8.4V), with common grounds (GND) tied to the Raspberry Pi.
-
-##  Usage
-
-### 1. Training & Research
-Explore the model development phase via Jupyter:
-```bash
-jupyter notebook notebooks/
-```
-
-### 2. Real-Time Detection
-Start the monitoring system on the Raspberry Pi:
-```bash
-python src/real_time_detection.py
-```
-
-### 3. Unified Stream Analysis
-Run the combined detection and streaming service:
-```bash
-python src/combined_detection_stream.py
-```
-
-### 4. Offline Model Evaluation
-Evaluate a trained model against an unseen test dataset organized in class subfolders:
-```bash
-python src/evaluate.py --model models/plant_disease_model_final.h5 --data path/to/test_dataset
-```
-*(Also supports `--model-path`, `--data-dir`, `--output-dir`, and `--batch-size`)*.
-
-This script computes inference metrics and outputs `metrics.json` (overall accuracy, macro/weighted averages, and per-class precision/recall/F1), `confusion_matrix.png`, and `classification_report.txt` to `docs/assets/results/` (or a custom `--output-dir`).
-
-##  Output
-Upon detection, the system provides:
-- **Disease Classification**: Accurate identification of the plant condition.
-- **Confidence Score**: Statistical probability of the detection.
-- **Treatment Protocol**: Actionable advice in English/Arabic fetched from the database.
-
-##  Limitations & Future Work
-
-While Farmer Eye establishes a functional edge-AI diagnostic prototype, several technical constraints define the scope of the current release and outline priorities for future development:
-
-1. **Limited Crop and Condition Scope**:
-   The classification model is restricted to **25 classes across 5 crops** (Cotton, Tomato, Potato, Pepper, and Strawberry). Many common regional crops, weed species, and nutrient deficiencies fall outside the current label set.
-   * *Future Work*: Broaden the taxonomy to include cereal grains (Wheat, Corn, Rice), legumes, and non-pathogenic abiotic stressors (drought, nitrogen deficiency).
-
-2. **Dataset Domain Gap (Controlled vs. Real Field Conditions)**:
-   A significant proportion of the training data originates from the PlantVillage benchmark ([Hughes & Salathé, 2015](https://arxiv.org/abs/1511.08060)), where leaves were captured excised in controlled laboratory setups against uniform monochrome backgrounds. Real agricultural environments introduce dynamic daylight, harsh shadows, complex background foliage, and camera motion blur.
-   * *Future Work*: Collect, annotate, and fine-tune on in-situ field imagery with complex backgrounds, utilizing domain adaptation techniques and self-supervised pretraining.
-
-3. **Unencrypted Local WebSocket Communication**:
-   The current edge streaming server relies on standard, unencrypted WebSockets (`ws://`) without cryptographic TLS certificates or token-based authentication.
-   * *Future Work*: Upgrade to secure WebSockets (`wss://`) utilizing TLS encryption and API key or JWT-based mutual authentication to safeguard vehicle control and data integrity.
-
-4. **Manual Teleoperation (Absence of Autonomous Navigation)**:
-   Vehicle movement currently depends on manual driving commands sent from the mobile interface.
-   * *Future Work*: Integrate autonomous patrol capabilities, including GPS/RTK waypoint tracking, ultrasonic/LiDAR obstacle avoidance, and visual SLAM for structured furrow navigation.
-
-5. **Spreadsheet-Based Diagnostic Database**:
-   Treatments are queried from a local Excel workbook (`data/plant_disease_data.xlsx`), which lacks concurrent write capabilities, caching, and automated remote synchronizability.
-   * *Future Work*: Migrate to an embedded relational database (e.g., SQLite or PostgreSQL) with REST/GraphQL synchronization for real-time agronomic catalog updates.
-
-6. **Advisory Nature of Recommendations**:
-   > [!CAUTION]
-   > All treatment recommendations provided by the system are strictly informational and advisory. Real-world pesticide, fungicide, and cultural treatments must be reviewed, confirmed, and supervised by a qualified agronomist or local agricultural extension specialist before field application.
-
-##  License
-
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
 
-<p align="center">
-  <b>Developed and Designed by</b><br>
-  Mariam Maysara • Fatma Zayed • Mohamed Magdy • Mohamed Hesham
-  <br><br>
-  <b>FarmerEye Team</b>
-</p>
+## ⚠️ Limitations & Future Work
+
+While Farmer Eye delivers a functional edge-AI diagnostic prototype, several engineering constraints define the current scope:
+
+1. **Crop Class Taxonomy**: Restricted to 25 classes across 5 crops (Cotton, Tomato, Potato, Pepper, Strawberry). Future iterations will expand to cereal grains (Wheat, Corn, Rice) and abiotic nutritional deficiencies.
+2. **Dataset Domain Gap**: Training relies significantly on laboratory-captured leaves against monochrome backgrounds. Field accuracy under harsh outdoor sunlight, shadows, and natural ground clutter requires ongoing in-situ data collection.
+3. **Unencrypted Local WebSockets**: The local link uses unencrypted `ws://`. Production releases will migrate to `wss://` with TLS encryption and JWT-based mutual authentication.
+4. **Manual Teleoperation**: Rover movement currently relies on operator driving commands. Autonomous navigation via GPS waypoints, obstacle avoidance, and visual SLAM is scheduled for future milestones.
+5. **Spreadsheet-Based Database**: Treatments are read from an Excel spreadsheet (`plant_disease_data.xlsx`). Transitioning to an embedded SQLite or PostgreSQL database will enable real-time cloud catalog sync.
+6. **Advisory Nature of Recommendations**:
+   > [!CAUTION]
+   > All treatment recommendations provided by the system are strictly informational and advisory. Agricultural treatments and chemical applications must be confirmed and supervised by a certified agronomist or local agricultural extension expert before field application.
+
+---
+
+## 👥 License & Team
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+### Developed and Designed by (FarmerEye Team)
+- **Mariam Maysara**
+- **Fatma Zayed**
+- **Mohamed Magdy**
+- **Mohamed Hesham**
+
+*Faculty of Engineering — Graduation Project: Smart Vehicle for Crops Health Detection and Classification Using AI-powered and IoT.*
