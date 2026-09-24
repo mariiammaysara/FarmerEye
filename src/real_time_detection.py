@@ -1,7 +1,10 @@
 import os
 import cv2
 import numpy as np
-from tensorflow.keras.models import load_model
+try:
+    from tensorflow.keras.models import load_model
+except ImportError:
+    load_model = None
 import time
 import pandas as pd
 import websockets
@@ -9,7 +12,10 @@ import asyncio
 import json
 import base64
 from datetime import datetime
-from picamera2 import Picamera2
+try:
+    from picamera2 import Picamera2
+except ImportError:
+    Picamera2 = None
 import logging
 
 # Set up logging
@@ -36,8 +42,19 @@ except ImportError:
 
 # === LOAD MODEL ===
 logger.info("📦 Loading model...")
-model = load_model(MODEL_PATH)
-logger.info("✅ Model loaded successfully.")
+try:
+    if load_model is not None and os.path.exists(MODEL_PATH):
+        model = load_model(MODEL_PATH)
+        logger.info("✅ Model loaded successfully.")
+    else:
+        model = None
+        if load_model is None:
+            logger.warning("⚠️ TensorFlow is not installed. Model not loaded.")
+        else:
+            logger.warning(f"⚠️ Model file not found at {MODEL_PATH}")
+except Exception as e:
+    logger.error(f"❌ Error loading model: {e}")
+    model = None
 
 async def handle_client(websocket):
     """Handle a connection and dispatch it to the shared server."""

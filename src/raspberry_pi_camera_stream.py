@@ -4,7 +4,10 @@ import asyncio
 import websockets
 import json
 import base64
-from picamera2 import Picamera2
+try:
+    from picamera2 import Picamera2
+except ImportError:
+    Picamera2 = None
 
 # WebSocket host and port
 WEBSOCKET_HOST = os.environ.get("WEBSOCKET_HOST", "0.0.0.0")

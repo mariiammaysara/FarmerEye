@@ -1,7 +1,10 @@
 import os
 import cv2
 import numpy as np
-from tensorflow.keras.models import load_model
+try:
+    from tensorflow.keras.models import load_model
+except ImportError:
+    load_model = None
 import asyncio
 import websockets
 import json
@@ -9,7 +12,10 @@ import base64
 import time
 import pandas as pd
 from datetime import datetime              
-from picamera2 import Picamera2 # Use Picamera2
+try:
+    from picamera2 import Picamera2 # Use Picamera2
+except ImportError:
+    Picamera2 = None
 import logging
 import sys # For checking Python version
 
@@ -57,9 +63,16 @@ def load_resources():
     """Loads the Keras model and treatment data."""
     global model, treatment_df
     try:
-        logger.info(f"📦 Loading disease detection model from: {MODEL_PATH}")
-        model = load_model(MODEL_PATH)
-        logger.info("✅ Model loaded successfully.")
+        if load_model is not None and os.path.exists(MODEL_PATH):
+            logger.info(f"📦 Loading disease detection model from: {MODEL_PATH}")
+            model = load_model(MODEL_PATH)
+            logger.info("✅ Model loaded successfully.")
+        else:
+            model = None
+            if load_model is None:
+                logger.warning("⚠️ TensorFlow is not installed. Model not loaded.")
+            else:
+                logger.warning(f"⚠️ Model file not found at: {MODEL_PATH}")
 
         logger.info(f"📖 Loading treatment data from: {TREATMENT_FILE_PATH}")
         treatment_df = pd.read_excel(TREATMENT_FILE_PATH)
