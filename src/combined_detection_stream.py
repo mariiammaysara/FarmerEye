@@ -44,18 +44,11 @@ model = None
 treatment_df = None
 picam2 = None # PiCamera2 instance
 
-# --- Class Names (Ensure this matches your model's output classes exactly) ---
-CLASS_NAMES = [
-    'Aphids_cotton', 'Army worm_cotton', 'Bacterial blight_cotton', 'Healthy_cotton',
-    'Pepper_bell_bacterial_spot', 'Pepper_bellhealthy', 'Potato__Early_blight',
-    'Potato_Late_blight', 'Potato_healthy', 'Powdery mildew_cotton',
-    'Strawberry_Leaf_scorch', 'Strawberry_healthy', 'Target spot_cotton',
-    'Tomato_Bacterial_spot', 'Tomato_Early_blight', 'Tomato_Late_blight',
-    'Tomato_Leaf_Mold', 'Tomato_Septoria_leaf_spot',
-    'Tomato_Spider_mites Two-spotted_spider_mite', 'Tomato_Target_Spot',
-    'Tomato_Tomato_Yellow_Leaf_Curl_Virus', 'Tomato_Tomato_mosaic_virus',
-    'Tomato___healthy', 'cotton_curl_virus', 'cotton_fussarium_wilt'
-]
+# --- Class Names (Imported from single source of truth) ---
+try:
+    from src.class_names import CLASS_NAMES, normalize_disease_name
+except ImportError:
+    from class_names import CLASS_NAMES, normalize_disease_name
 logger.info(f"Defined {len(CLASS_NAMES)} class names.")
 
 # --- Helper Functions ---
@@ -99,8 +92,9 @@ def get_treatment_info(disease_name):
         treat_ar_col = treatment_df.columns[2]
         resources_col = treatment_df.columns[3]
 
-        # Case-insensitive and whitespace-insensitive matching
-        match = treatment_df[treatment_df[disease_col].str.strip().str.lower() == disease_name.strip().lower()]
+        # Tolerant matching: normalize disease column and target name
+        norm_target = normalize_disease_name(disease_name)
+        match = treatment_df[treatment_df[disease_col].apply(normalize_disease_name) == norm_target]
 
         if not match.empty:
             row = match.iloc[0]

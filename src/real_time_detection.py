@@ -29,17 +29,10 @@ connected_clients = {}  # Changed to dict to store last ping time
 last_detection_time = 0
 last_no_detection_message_time = 0
 
-CLASS_NAMES = [
-    'Aphids_cotton', 'Army worm_cotton', 'Bacterial blight_cotton', 'Healthy_cotton',
-    'Pepper_bell_bacterial_spot', 'Pepper_bellhealthy', 'Potato__Early_blight',
-    'Potato_Late_blight', 'Potato_healthy', 'Powdery mildew_cotton',
-    'Strawberry_Leaf_scorch', 'Strawberry_healthy', 'Target spot_cotton',
-    'Tomato_Bacterial_spot', 'Tomato_Early_blight', 'Tomato_Late_blight',
-    'Tomato_Leaf_Mold', 'Tomato_Septoria_leaf_spot',
-    'Tomato_Spider_mites Two-spotted_spider_mite', 'Tomato_Target_Spot',
-    'Tomato_Tomato_Yellow_Leaf_Curl_Virus', 'Tomato_Tomato_mosaic_virus',
-    'Tomato___healthy', 'cotton_curl_virus', 'cotton_fussarium_wilt'
-]
+try:
+    from src.class_names import CLASS_NAMES, normalize_disease_name
+except ImportError:
+    from class_names import CLASS_NAMES, normalize_disease_name
 
 # === LOAD MODEL ===
 logger.info("📦 Loading model...")
@@ -154,7 +147,8 @@ def get_treatment_info(disease_name):
     try:
         treatment_df = pd.read_excel(TREATMENT_FILE_PATH)
         disease_column_name = treatment_df.columns[0]
-        treatment_info = treatment_df[treatment_df[disease_column_name].str.strip().str.lower() == disease_name.strip().lower()]
+        norm_target = normalize_disease_name(disease_name)
+        treatment_info = treatment_df[treatment_df[disease_column_name].apply(normalize_disease_name) == norm_target]
         
         if not treatment_info.empty:
             return {
