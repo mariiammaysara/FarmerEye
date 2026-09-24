@@ -32,6 +32,15 @@ The companion cross-platform mobile application built with **Flutter** is develo
 - **Modular Architecture**: Decoupled codebase designed for scalability and maintainability.
 - **Local WebSocket Communication**: Asynchronous WebSocket communication ensuring low-latency data and video delivery between the edge device and connected clients on the local network.
 
+##  Dataset
+
+The plant disease detection model is trained on **39,776 validated images** across **25 classes** spanning 5 crops (Cotton, Tomato, Potato, Pepper, and Strawberry).
+
+- **Sources**:
+  - **PlantVillage Dataset**: Kaggle dataset ([KAGGLE_URL]), original repository [spMohanty/PlantVillage-Dataset](https://github.com/spMohanty/PlantVillage-Dataset), and reference paper ([Hughes & Salathé, 2015](https://arxiv.org/abs/1511.08060)).
+  - **Additional Real-World Images** (Cotton & Field subsets): [DESCRIBE SOURCE + COUNT, or write "TBD"] — TBD.
+- **Data Card**: Refer to the comprehensive [data/README.md](data/README.md) for full dataset specifications, split distributions (train 25,456 / val 6,365 / test 7,955), class lists, and download instructions.
+
 ##  Tech Stack
 
 ###  Artificial Intelligence & Data
@@ -58,7 +67,8 @@ The companion cross-platform mobile application built with **Flutter** is develo
 ```text
 FarmerEye/
 ├── data/
-│   └── plant_disease_data.xlsx      # Database for treatments and diagnostics
+│   ├── plant_disease_data.xlsx      # Database for treatments and diagnostics
+│   └── README.md                    # Dataset card and documentation
 ├── docs/
 │   └── assets/
 │       └── robotic_car_image.jpg    # Project visual assets
