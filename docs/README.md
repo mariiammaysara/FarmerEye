@@ -21,6 +21,7 @@ The following guides document the architecture, machine learning model, network 
 | [Hardware Setup](hardware.md) | Camera specifications, connection steps, and verification procedures on physical hardware. |
 | [Development and Testing](development.md) | Unit testing with hardware mocks, continuous integration workflows, and coding conventions. |
 | [Limitations and Future Work](limitations.md) | Known technical constraints, domain gaps, and planned system extensions. |
+| [Project Context and Credits](project-context.md) | Project academic background, team members, supervisors, and funding programs. |
 | [Glossary](glossary.md) | Simple definitions for all technical terms used across the documentation set. |
 
 ---
