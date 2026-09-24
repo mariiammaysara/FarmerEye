@@ -296,6 +296,39 @@ Upon detection, the system provides:
 - **Disease Classification**: Accurate identification of the plant condition.
 - **Confidence Score**: Statistical probability of the detection.
 - **Treatment Protocol**: Actionable advice in English/Arabic fetched from the database.
+
+##  Limitations & Future Work
+
+While Farmer Eye establishes a functional edge-AI diagnostic prototype, several technical constraints define the scope of the current release and outline priorities for future development:
+
+1. **Limited Crop and Condition Scope**:
+   The classification model is restricted to **25 classes across 5 crops** (Cotton, Tomato, Potato, Pepper, and Strawberry). Many common regional crops, weed species, and nutrient deficiencies fall outside the current label set.
+   * *Future Work*: Broaden the taxonomy to include cereal grains (Wheat, Corn, Rice), legumes, and non-pathogenic abiotic stressors (drought, nitrogen deficiency).
+
+2. **Dataset Domain Gap (Controlled vs. Real Field Conditions)**:
+   A significant proportion of the training data originates from the PlantVillage benchmark ([Hughes & Salathé, 2015](https://arxiv.org/abs/1511.08060)), where leaves were captured excised in controlled laboratory setups against uniform monochrome backgrounds. Real agricultural environments introduce dynamic daylight, harsh shadows, complex background foliage, and camera motion blur.
+   * *Future Work*: Collect, annotate, and fine-tune on in-situ field imagery with complex backgrounds, utilizing domain adaptation techniques and self-supervised pretraining.
+
+3. **Unencrypted Local WebSocket Communication**:
+   The current edge streaming server relies on standard, unencrypted WebSockets (`ws://`) without cryptographic TLS certificates or token-based authentication.
+   * *Future Work*: Upgrade to secure WebSockets (`wss://`) utilizing TLS encryption and API key or JWT-based mutual authentication to safeguard vehicle control and data integrity.
+
+4. **Manual Teleoperation (Absence of Autonomous Navigation)**:
+   Vehicle movement currently depends on manual driving commands sent from the mobile interface.
+   * *Future Work*: Integrate autonomous patrol capabilities, including GPS/RTK waypoint tracking, ultrasonic/LiDAR obstacle avoidance, and visual SLAM for structured furrow navigation.
+
+5. **Spreadsheet-Based Diagnostic Database**:
+   Treatments are queried from a local Excel workbook (`data/plant_disease_data.xlsx`), which lacks concurrent write capabilities, caching, and automated remote synchronizability.
+   * *Future Work*: Migrate to an embedded relational database (e.g., SQLite or PostgreSQL) with REST/GraphQL synchronization for real-time agronomic catalog updates.
+
+6. **Advisory Nature of Recommendations**:
+   > [!CAUTION]
+   > All treatment recommendations provided by the system are strictly informational and advisory. Real-world pesticide, fungicide, and cultural treatments must be reviewed, confirmed, and supervised by a qualified agronomist or local agricultural extension specialist before field application.
+
+##  License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
 ---
 
 <p align="center">
