@@ -1,19 +1,21 @@
-<div align="center">
-  <h1>Farmer Eye</h1>
-  <h3>Smart Vehicle for Crops Health Detection and Classification Using AI-powered and IoT</h3>
-
-  <p>
-    <img src="docs/assets/robotic_car.svg" alt="Farmer Eye Robotic Car" width="200">
-  </p>
-
-  <p>An edge-AI precision agriculture system combining mobile robotics, computer vision, and IoT to detect crop diseases in real time.</p>
-
-  <p>
-    <a href="https://github.com/mariiammaysara/FarmerEye/actions/workflows/tests.yml"><img src="https://github.com/mariiammaysara/FarmerEye/actions/workflows/tests.yml/badge.svg" alt="Tests Status"></a>
-    <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.10%2B-blue.svg" alt="Python 3.10+"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT"></a>
-  </p>
-</div>
+<table>
+  <tr>
+    <td width="65%" valign="top">
+      <h1>Farmer Eye</h1>
+      <h3>Smart Vehicle for Crops Health Detection and Classification Using AI-powered and IoT</h3>
+      <p>An edge-AI precision agriculture system combining mobile robotics, computer vision, and IoT to detect crop diseases in real time.</p>
+      <p>
+        <a href="https://github.com/mariiammaysara/FarmerEye/actions/workflows/tests.yml"><img src="https://github.com/mariiammaysara/FarmerEye/actions/workflows/tests.yml/badge.svg" alt="Tests Status"></a>
+        <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.10%2B-blue.svg" alt="Python 3.10+"></a>
+        <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT"></a>
+        <a href="https://lnkd.in/p/epwcGhRv"><img src="https://img.shields.io/badge/Demo-Watch%20Video-c9a227?logo=linkedin&logoColor=white" alt="Watch Demo Video"></a>
+      </p>
+    </td>
+    <td width="35%" align="center" valign="middle">
+      <img src="./docs/assets/robotic_car.svg" alt="Farmer Eye Robotic Car" width="200">
+    </td>
+  </tr>
+</table>
 
 ---
 
