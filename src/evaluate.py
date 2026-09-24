@@ -47,7 +47,7 @@ def parse_args(args: List[str] = None) -> argparse.Namespace:
         dest="model_path",
         type=str,
         required=True,
-        help="Path to the trained Keras model file (.h5 or SavedModel format)."
+        help="Path to the trained model file (.h5, SavedModel, or .tflite format)."
     )
     parser.add_argument(
         "--data-dir", "--data", "-d",
@@ -312,15 +312,70 @@ def generate_and_save_metrics(
     return metrics_data
 
 
+class ModelRunner:
+    """
+    Unified inference runner supporting both Keras (.h5 / SavedModel) and
+    TensorFlow Lite (.tflite) formats with identical predict interface.
+    """
+    def __init__(self, model_path: str):
+        self.model_path = model_path
+        self.is_tflite = model_path.lower().endswith(".tflite")
+
+        if self.is_tflite:
+            logger.info("Initializing TensorFlow Lite Interpreter...")
+            try:
+                import tensorflow as tf
+                self.interpreter = tf.lite.Interpreter(model_path=model_path)
+            except (ImportError, AttributeError):
+                try:
+                    from tflite_runtime.interpreter import Interpreter
+                    self.interpreter = Interpreter(model_path=model_path)
+                except ImportError:
+                    raise ImportError(
+                        "Neither TensorFlow nor tflite_runtime is installed. "
+                        "Cannot run inference on .tflite models."
+                    )
+
+            self.interpreter.allocate_tensors()
+            self.input_details = self.interpreter.get_input_details()
+            self.output_details = self.interpreter.get_output_details()
+            self.input_index = self.input_details[0]["index"]
+            self.output_index = self.output_details[0]["index"]
+            self.expected_dtype = self.input_details[0]["dtype"]
+            logger.info(
+                f"TFLite model loaded. Input shape: {self.input_details[0]['shape']}, "
+                f"dtype: {self.expected_dtype}"
+            )
+        else:
+            logger.info("Loading Keras model...")
+            if load_model is None:
+                raise ImportError(
+                    "TensorFlow is not installed in the current environment. "
+                    "Please install requirements.txt or tensorflow to run model evaluation."
+                )
+            self.model = load_model(model_path)
+
+    def predict(self, batch_tensor: np.ndarray, verbose: int = 0) -> np.ndarray:
+        """
+        Runs batched prediction, returning probability matrix of shape (B, num_classes).
+        """
+        if self.is_tflite:
+            batch_preds = []
+            for i in range(batch_tensor.shape[0]):
+                sample = np.expand_dims(batch_tensor[i], axis=0)
+                if sample.dtype != self.expected_dtype:
+                    sample = sample.astype(self.expected_dtype)
+                self.interpreter.set_tensor(self.input_index, sample)
+                self.interpreter.invoke()
+                out = self.interpreter.get_tensor(self.output_index)
+                batch_preds.append(out[0])
+            return np.array(batch_preds, dtype=np.float32)
+        else:
+            return self.model.predict(batch_tensor, verbose=verbose)
+
+
 def main(args: List[str] = None):
     parsed = parse_args(args)
-
-    if load_model is None:
-        logger.error(
-            "TensorFlow is not installed in the current environment. "
-            "Please install requirements.txt or tensorflow to run model evaluation."
-        )
-        sys.exit(1)
 
     if not os.path.exists(parsed.model_path):
         logger.error(f"Model path does not exist: {parsed.model_path}")
@@ -328,7 +383,7 @@ def main(args: List[str] = None):
 
     logger.info(f"Loading trained model from '{parsed.model_path}'...")
     try:
-        model = load_model(parsed.model_path)
+        model = ModelRunner(parsed.model_path)
     except Exception as e:
         logger.error(f"Failed loading model: {e}")
         sys.exit(1)

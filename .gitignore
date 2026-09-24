@@ -147,3 +147,7 @@ cython_debug/
 data/*
 !data/plant_disease_data.xlsx
 !data/README.md
+
+# Converted TFLite models
+models_tflite/
+*.tflite
