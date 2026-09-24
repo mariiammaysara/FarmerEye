@@ -43,19 +43,22 @@ def parse_args(args: List[str] = None) -> argparse.Namespace:
         description="Evaluate Farmer Eye disease classification model on a test dataset."
     )
     parser.add_argument(
-        "--model-path", "-m",
+        "--model-path", "--model", "-m",
+        dest="model_path",
         type=str,
         required=True,
         help="Path to the trained Keras model file (.h5 or SavedModel format)."
     )
     parser.add_argument(
-        "--data-dir", "-d",
+        "--data-dir", "--data", "-d",
+        dest="data_dir",
         type=str,
         required=True,
         help="Path to the test data directory containing class subfolders."
     )
     parser.add_argument(
-        "--output-dir", "-o",
+        "--output-dir", "--output", "-o",
+        dest="output_dir",
         type=str,
         default="docs/assets/results",
         help="Directory to save evaluation artifacts (default: docs/assets/results)."

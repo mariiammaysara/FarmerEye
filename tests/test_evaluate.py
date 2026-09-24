@@ -23,6 +23,17 @@ def test_evaluate_parse_args():
     assert args.img_size == 128
 
 
+def test_evaluate_parse_args_aliases():
+    args = parse_args([
+        "--model", "models/plant_disease_model_final.h5",
+        "--data", "data/test_dataset",
+        "--output", "custom/results"
+    ])
+    assert args.model_path == "models/plant_disease_model_final.h5"
+    assert args.data_dir == "data/test_dataset"
+    assert args.output_dir == "custom/results"
+
+
 def test_build_class_mapping():
     mapping = build_class_mapping()
     assert len(mapping) == len(CLASS_NAMES)
