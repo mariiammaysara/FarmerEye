@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 120 120" fill="none">
+  <!-- Tires with tread detail -->
+  <g>
+    <rect x="12" y="78" width="26" height="30" rx="6" fill="#111" />
+    <path d="M12 85h26M12 92h26M12 99h26" stroke="#222" stroke-width="1" />
+  </g>
+  <g>
+    <rect x="82" y="78" width="26" height="30" rx="6" fill="#111" />
+    <path d="M82 85h26M82 92h26M82 99h26" stroke="#222" stroke-width="1" />
+  </g>
+  
+  <!-- Chassis - Vibrant Red -->
+  <path d="M10 75C10 60 20 48 60 48C100 48 110 60 110 75L105 85H15L10 75Z" fill="#e11d48" />
+  <path d="M15 82h90c0 2-2 3-5 3H20c-3 0-5-1-5-3z" fill="#9f1239" />
+  
+  <!-- Solar Panel -->
+  <path d="M25 45L35 15H85L95 45H25Z" fill="#1a1a1a" stroke="#333" stroke-width="1" />
+  <path d="M40 15L45 45M60 15L60 45M80 15L75 45M35 15H85M40 30H80" stroke="#444" stroke-width="0.5" />
+  
+  <!-- Camera Mount & Lens -->
+  <rect x="50" y="32" width="20" height="18" rx="3" fill="#222" stroke="#444" stroke-width="1" />
+  <circle cx="60" cy="41" r="6" fill="#000" stroke="#c9a227" stroke-width="1.5" />
+  <circle cx="60" cy="41" r="2.5" fill="#111" />
+  <rect x="58" y="50" width="4" height="12" fill="#444" opacity="0.8" />
+  <rect x="48" y="48" width="24" height="2" fill="#333" />
+</svg>

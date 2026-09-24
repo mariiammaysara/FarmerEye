@@ -1,6 +1,11 @@
 <div align="center">
   <h1>Farmer Eye</h1>
   <h3>Smart Vehicle for Crops Health Detection and Classification Using AI-powered and IoT</h3>
+
+  <p>
+    <img src="docs/assets/robotic_car.svg" alt="Farmer Eye Robotic Car" width="200">
+  </p>
+
   <p>An edge-AI precision agriculture system combining mobile robotics, computer vision, and IoT to detect crop diseases in real time.</p>
 
   <p>
