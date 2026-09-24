@@ -219,6 +219,13 @@ Run the combined detection and streaming service:
 python src/combined_detection_stream.py
 ```
 
+### 4. Offline Model Evaluation
+Evaluate a trained model against an unseen test dataset organized in class subfolders:
+```bash
+python src/evaluate.py --model-path models/plant_disease_model_final.h5 --data-dir path/to/test_dataset
+```
+This script computes inference metrics and outputs `metrics.json` (overall accuracy, macro/weighted averages, and per-class precision/recall/F1), `confusion_matrix.png`, and `classification_report.txt` to `docs/assets/results/` (or a custom `--output-dir`).
+
 ##  Output
 Upon detection, the system provides:
 - **Disease Classification**: Accurate identification of the plant condition.
