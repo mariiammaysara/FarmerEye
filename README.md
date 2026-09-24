@@ -1,6 +1,6 @@
 <div align="center">
   <h1> Farmer Eye Robotic Car – Graduation Project</h1>
-  <h3>Smart AI & IoT System for Real-Time Plant Disease Detection</h3>
+  <h3>Smart Vehicle for Crops Health Detection and Classification Using AI-powered and IoT</h3>
   <p align="center">
     <img src="docs/assets/robotic_car_image.jpg" width="400" height="300" alt="Farmer Eye Robotic Car">
   </p>
@@ -10,16 +10,16 @@
 
 ##  Project Overview
 
-**Farmer Eye** is a professional-grade, end-to-end AI-IoT ecosystem designed to modernize agriculture by automating plant disease diagnostics. The system integrates a **remote-controlled robotic car**, high-performance **Deep Learning models**, and a **Raspberry Pi-powered edge device** to patrol fields and identify crop diseases in real-time.
+**Farmer Eye** (Registered Title: *Smart Vehicle for Crops Health Detection and Classification Using AI-powered and IoT*) is an end-to-end AI-IoT system designed to modernize agriculture by automating plant disease diagnostics. The system integrates a **remote-controlled robotic car**, high-performance **Deep Learning models**, and a **Raspberry Pi-powered edge device** to patrol fields and identify crop diseases in real-time.
 
 By bridging the gap between hardware and software, Farmer Eye provides farmers with instant diagnostic feedback and localized treatment recommendations (available in English and Arabic) to prevent crop loss and optimize harvest health.
 
 ##  Mobile Application
 
-The system includes a dedicated cross-platform mobile application built with **Flutter**, serving as the central hub for monitoring and control:
+The companion cross-platform mobile application built with **Flutter** is developed separately and is not included in this repository. It serves as the central hub for monitoring and control:
 
 - 🎥 **Real-Time Live Feed**: Low-latency video streaming from the robotic car's onboard camera.
-- 🔔 **Instant Alerts**: Push notifications sent the moment a plant disease is detected, including classification and confidence metrics.
+- 🔔 **Instant Alerts**: Real-time WebSocket detection messages sent the moment a plant disease is detected, including classification and confidence metrics.
 - 💊 **Treatment Intelligence**: Integrated pharmaceutical database providing clinical diagnostics and treatment protocols.
 - 🕹️ **Remote Telemetry**: Real-time status monitoring for hardware health and connectivity.
 
@@ -29,8 +29,8 @@ The system includes a dedicated cross-platform mobile application built with **F
 - **High-Accuracy CNN**: Fine-tuned Convolutional Neural Networks optimized for high-precision identification across various plant classes.
 - **Multi-Crop Support**: Robust detection for Cotton, Tomato, Potato, Pepper, and Strawberry.
 - **Bi-Lingual Diagnostics**: Comprehensive treatment guidance in both English and Arabic.
-- **Production-Ready Architecture**: Decoupled, modular codebase designed for scalability and maintainability.
-- **IoT-Cloud Synchronization**: WebSocket-based communication ensuring instant data delivery between edge and mobile.
+- **Modular Architecture**: Decoupled codebase designed for scalability and maintainability.
+- **Local WebSocket Communication**: Asynchronous WebSocket communication ensuring low-latency data and video delivery between the edge device and connected clients on the local network.
 
 ##  Tech Stack
 
@@ -47,7 +47,6 @@ The system includes a dedicated cross-platform mobile application built with **F
 
 ###  Mobile & Frontend
 - **Framework**: Flutter (Dart)
-- **State Management**: Provider / BLoC
 - **Communication**: WebSocket Client
 
 ###  Backend & Infrastructure
@@ -65,7 +64,7 @@ FarmerEye/
 │       └── robotic_car_image.jpg    # Project visual assets
 ├── models/
 │   ├── fine_tuned_model.h5          # Optimized CNN model
-│   └── plant_disease_model_final.h5 # Final production-ready model
+│   └── plant_disease_model_final.h5 # Final trained model
 ├── notebooks/
 │   └── research_and_training.ipynb  # ML development and training pipeline
 ├── src/
@@ -73,7 +72,7 @@ FarmerEye/
 │   ├── combined_detection_stream.py # Combined UI and streaming logic
 │   ├── real_time_detection.py       # Core inference and hardware logic
 │   └── raspberry_pi_camera_stream.py# Low-level camera streaming service
-├── tests/                           # System validation and testing
+├── tests/                           # System validation and testing (planned)
 ├── requirements.txt                 # Dependency manifest
 └── README.md                        # Project documentation
 ```
