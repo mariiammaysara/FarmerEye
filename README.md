@@ -1,10 +1,14 @@
-# Farmer Eye
+<div align="center">
+  <h1>Farmer Eye</h1>
+  <h3>Smart Vehicle for Crops Health Detection and Classification Using AI-powered and IoT</h3>
+  <p>An edge-AI precision agriculture system combining mobile robotics, computer vision, and IoT to detect crop diseases in real time.</p>
 
-An edge-AI IoT system deployed on a mobile vehicle to detect and classify plant leaf diseases in real time.
-
-[![Tests Status](https://github.com/mariiammaysara/FarmerEye/actions/workflows/tests.yml/badge.svg)](https://github.com/mariiammaysara/FarmerEye/actions/workflows/tests.yml)
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+  <p>
+    <a href="https://github.com/mariiammaysara/FarmerEye/actions/workflows/tests.yml"><img src="https://github.com/mariiammaysara/FarmerEye/actions/workflows/tests.yml/badge.svg" alt="Tests Status"></a>
+    <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.10%2B-blue.svg" alt="Python 3.10+"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT"></a>
+  </p>
+</div>
 
 ---
 
