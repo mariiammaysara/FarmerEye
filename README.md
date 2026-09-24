@@ -2,6 +2,11 @@
   <h1> Farmer Eye Robotic Car – Graduation Project</h1>
   <h3>Smart Vehicle for Crops Health Detection and Classification Using AI-powered and IoT</h3>
   <p align="center">
+    <a href="https://github.com/mariiammaysara/FarmerEye/actions/workflows/tests.yml">
+      <img src="https://github.com/mariiammaysara/FarmerEye/actions/workflows/tests.yml/badge.svg" alt="Tests">
+    </a>
+  </p>
+  <p align="center">
     <img src="docs/assets/robotic_car_image.jpg" width="400" height="300" alt="Farmer Eye Robotic Car">
   </p>
 </div>
