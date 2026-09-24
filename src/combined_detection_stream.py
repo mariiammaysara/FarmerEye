@@ -1,3 +1,23 @@
+"""Unified real-time camera streaming and plant disease detection service.
+
+This module provides the primary edge service for Farmer Eye on Raspberry Pi.
+It concurrently captures live camera frames, streams compressed JPEG video over
+WebSockets to connected client apps, and periodically runs deep learning inference
+with disease treatment lookup in an asynchronous, non-blocking pipeline.
+
+Usage:
+    Run directly on Raspberry Pi:
+        python src/combined_detection_stream.py
+
+Network Configuration:
+    Port: 8765 (configurable via WEBSOCKET_PORT environment variable)
+    Host: 0.0.0.0 (configurable via WEBSOCKET_HOST environment variable)
+
+Pipeline Context:
+    Picamera2 (CSI) -> Frame Capture -> cv2.imencode() -> WebSocket (Video Feed)
+                     -> Preprocess (224x224, /255) -> CNN Inference (Cooldown 2.0s)
+                     -> Database Lookup -> WebSocket (Diagnostic Alerts)
+"""
 import os
 import cv2
 import numpy as np
@@ -12,107 +32,137 @@ import base64
 import time
 import pandas as pd
 from datetime import datetime              
+from typing import Dict, Any, Optional, Tuple
 try:
-    from picamera2 import Picamera2 # Use Picamera2
+    from picamera2 import Picamera2
 except ImportError:
     Picamera2 = None
 import logging
-import sys # For checking Python version
+import sys
 
-# --- Configuration ---
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MODEL_PATH = os.path.join(BASE_DIR, 'models', 'plant_disease_model_final.h5')
-TREATMENT_FILE_PATH = os.path.join(BASE_DIR, 'data', 'plant_disease_data.xlsx')
-IMG_SIZE = 224 # Should match the model's expected input size
-WEBSOCKET_HOST = os.environ.get('WEBSOCKET_HOST', '0.0.0.0') # Listen on all available network interfaces
-WEBSOCKET_PORT = int(os.environ.get('WEBSOCKET_PORT', 8765))
-DETECTION_THRESHOLD = 0.98 # Minimum confidence for detection
-CAMERA_RESOLUTION = (640, 480)
-CAMERA_FRAMERATE = 20 # Target framerate
-STREAM_QUALITY = 70 # JPEG quality for streaming (0-100)
-DETECTION_COOLDOWN = 2.0 # Seconds between detection attempts
-PING_INTERVAL = 20.0 # Seconds for server to expect ping from client
-PING_TIMEOUT = 35.0 # Seconds before disconnecting unresponsive client
+# Filesystem and model paths
+BASE_DIR: str = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_PATH: str = os.path.join(BASE_DIR, 'models', 'plant_disease_model_final.h5')
+TREATMENT_FILE_PATH: str = os.path.join(BASE_DIR, 'data', 'plant_disease_data.xlsx')
 
-# --- Logging Setup ---
+# Computer vision and preprocessing constants (must match model training resolution: 224x224)
+IMG_SIZE: int = 224
+
+# Network interface configuration
+WEBSOCKET_HOST: str = os.environ.get('WEBSOCKET_HOST', '0.0.0.0')
+WEBSOCKET_PORT: int = int(os.environ.get('WEBSOCKET_PORT', 8765))
+
+# Inference and streaming threshold parameters
+DETECTION_THRESHOLD: float = 0.98  # Minimum softmax confidence required to trigger alert
+DETECTION_COOLDOWN: float = 2.0  # Seconds between consecutive inference scans to prevent thermal throttling
+CAMERA_RESOLUTION: Tuple[int, int] = (640, 480)
+LORES_RESOLUTION: Tuple[int, int] = (320, 240)
+CAMERA_FRAMERATE: int = 20  # Acquisition rate in frames per second
+STREAM_QUALITY: int = 70  # JPEG quality (0-100) balancing visual clarity and network bandwidth
+DETECTION_IMAGE_QUALITY: int = 80  # Slightly higher JPEG quality for saved/sent alert images
+PING_INTERVAL: float = 20.0  # Heartbeat ping check interval in seconds
+PING_TIMEOUT: float = 35.0  # Seconds of silence before disconnecting an unresponsive client
+CLIENT_REGISTRATION_TIMEOUT_SECONDS: float = 10.0
+TIMEOUT_RETRY_INTERVAL_SECONDS: float = 10.0
+CAMERA_WARMUP_SECONDS: float = 2.0
+IDLE_CLIENT_CHECK_INTERVAL_SECONDS: float = 1.0
+CAPTURE_RETRY_BACKOFF_SECONDS: float = 0.5
+FPS_REPORT_INTERVAL_SECONDS: float = 10.0
+MIN_TREATMENT_COLUMNS: int = 4  # Expected schema: [disease, treat_en, treat_ar, resources]
+
+# Logging Setup
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(sys.stdout) # Ensure logs go to stdout
+        logging.StreamHandler(sys.stdout)
     ]      
 )
 logger = logging.getLogger('UnifiedServer')
 
-# --- Global Variables ---
-connected_clients = {} # {websocket: {'last_ping': timestamp, 'type': 'client_type_string'}}
+# Global runtime state
+connected_clients: Dict[Any, Dict[str, Any]] = {}
 model = None
 treatment_df = None
-picam2 = None # PiCamera2 instance
+picam2 = None
 
-# --- Class Names (Imported from single source of truth) ---
+# Class Names
 try:
     from src.class_names import CLASS_NAMES, normalize_disease_name
 except ImportError:
     from class_names import CLASS_NAMES, normalize_disease_name
 logger.info(f"Defined {len(CLASS_NAMES)} class names.")
 
-# --- Helper Functions ---
 
-def load_resources():
-    """Loads the Keras model and treatment data."""
+def load_resources() -> bool:
+    """Loads the Keras neural network model and pharmaceutical treatment spreadsheet.
+
+    Returns:
+        True if all required resources loaded successfully, or False if critical
+        data files are missing or malformed.
+    """
     global model, treatment_df
     try:
         if load_model is not None and os.path.exists(MODEL_PATH):
-            logger.info(f"📦 Loading disease detection model from: {MODEL_PATH}")
+            logger.info(f"Loading disease detection model from: {MODEL_PATH}")
             model = load_model(MODEL_PATH)
-            logger.info("✅ Model loaded successfully.")
+            logger.info("Model loaded successfully.")
         else:
             model = None
             if load_model is None:
-                logger.warning("⚠️ TensorFlow is not installed. Model not loaded.")
+                logger.warning("TensorFlow is not installed. Model not loaded.")
             else:
-                logger.warning(f"⚠️ Model file not found at: {MODEL_PATH}")
+                logger.warning(f"Model file not found at: {MODEL_PATH}")
 
-        logger.info(f"📖 Loading treatment data from: {TREATMENT_FILE_PATH}")
+        logger.info(f"Loading treatment data from: {TREATMENT_FILE_PATH}")
         treatment_df = pd.read_excel(TREATMENT_FILE_PATH)
-        # Basic validation of the excel file structure
-        if treatment_df.shape[1] < 4:
-             logger.error(f"❌ Treatment file seems malformed. Expected at least 4 columns, found {treatment_df.shape[1]}.")
-             treatment_df = None # Prevent usage if malformed
-             return False
-        logger.info(f"✅ Treatment data loaded successfully ({treatment_df.shape[0]} rows).")
+        # Validate that the sheet contains at least the four required diagnostic columns
+        if treatment_df.shape[1] < MIN_TREATMENT_COLUMNS:
+            logger.error(f"Treatment file seems malformed. Expected at least {MIN_TREATMENT_COLUMNS} columns, found {treatment_df.shape[1]}.")
+            treatment_df = None
+            return False
+        logger.info(f"Treatment data loaded successfully ({treatment_df.shape[0]} rows).")
         logger.info(f"   Columns: {list(treatment_df.columns)}")
         return True
 
     except FileNotFoundError as e:
-        logger.error(f"❌ File not found: {e}. Cannot load resources.")
+        logger.error(f"File not found: {e}. Cannot load resources.")
         return False
     except Exception as e:
-        logger.error(f"❌ Error loading resources: {str(e)}")
+        logger.error(f"Error loading resources: {str(e)}")
         return False
 
-def get_treatment_info(disease_name):
-    """Fetches treatment details for a given disease name."""
+
+def get_treatment_info(disease_name: str) -> Optional[Dict[str, str]]:
+    """Fetches bilingual treatment details for a given disease name.
+
+    Applies tolerant string normalization to both the query label and database
+    entries to ensure consistent matches despite formatting differences.
+
+    Args:
+        disease_name: The predicted disease class string.
+
+    Returns:
+        Dictionary containing disease name, English treatment, Arabic treatment,
+        and reference URL, or None if no match is found.
+    """
     if treatment_df is None:
         logger.warning("Treatment data not loaded. Cannot fetch info.")
         return None
 
     try:
-        # Assuming the first column is disease name, 2nd is Treat_EN, 3rd is Treat_AR, 4th is Resources
         disease_col = treatment_df.columns[0]
         treat_en_col = treatment_df.columns[1]
         treat_ar_col = treatment_df.columns[2]
         resources_col = treatment_df.columns[3]
 
-        # Tolerant matching: normalize disease column and target name
         norm_target = normalize_disease_name(disease_name)
         match = treatment_df[treatment_df[disease_col].apply(normalize_disease_name) == norm_target]
 
         if not match.empty:
             row = match.iloc[0]
             return {
-                'disease': row[disease_col].strip(), # Return consistent name
+                'disease': row[disease_col].strip(),
                 'treatment_en': str(row[treat_en_col]).strip() if pd.notna(row[treat_en_col]) else 'N/A',
                 'treatment_ar': str(row[treat_ar_col]).strip() if pd.notna(row[treat_ar_col]) else 'غير متوفر',
                 'resources': str(row[resources_col]).strip() if pd.notna(row[resources_col]) else ''
@@ -124,38 +174,63 @@ def get_treatment_info(disease_name):
         logger.error(f"Error fetching treatment info for '{disease_name}': {str(e)}")
         return None
 
-def encode_frame(frame, quality=STREAM_QUALITY):
-    """Encodes numpy array (image) to base64 string."""
+
+def encode_frame(frame: np.ndarray, quality: int = STREAM_QUALITY) -> Optional[str]:
+    """Compresses a NumPy image frame to JPEG and encodes it as base64 string.
+
+    Args:
+        frame: Image pixel matrix (NumPy ndarray).
+        quality: JPEG compression quality factor between 0 and 100.
+
+    Returns:
+        Base64 UTF-8 string on success, or None if encoding fails.
+    """
     try:
         is_success, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
         if not is_success:
-            logger.error("❌ Failed to encode frame to JPEG.")
+            logger.error("Failed to encode frame to JPEG.")
             return None
         return base64.b64encode(buffer).decode('utf-8')
     except Exception as e:
-        logger.error(f"❌ Error during frame encoding: {e}")
+        logger.error(f"Error during frame encoding: {e}")
         return None
 
-def preprocess_frame_for_model(frame):
-    """Resizes and normalizes frame for model prediction."""
+
+def preprocess_frame_for_model(frame: np.ndarray) -> Optional[np.ndarray]:
+    """Resizes and scales a camera frame to match the input specification of the model.
+
+    The model expects images scaled to 224x224 pixels with float32 values normalized
+    to the interval [0.0, 1.0], matching training preprocessing.
+
+    Args:
+        frame: Captured camera frame as NumPy ndarray.
+
+    Returns:
+        Preprocessed 4D batch tensor of shape (1, 224, 224, 3), or None on error.
+    """
     try:
         img = cv2.resize(frame, (IMG_SIZE, IMG_SIZE))
-        img = img.astype(np.float32) / 255.0 # Normalize
-        img = np.expand_dims(img, axis=0) # Add batch dimension
+        img = img.astype(np.float32) / 255.0
+        img = np.expand_dims(img, axis=0)
         return img
     except Exception as e:
-        logger.error(f"❌ Error during frame preprocessing: {e}")
+        logger.error(f"Error during frame preprocessing: {e}")
         return None
 
-# --- WebSocket Handling ---
 
-async def register_client(websocket):
-    """Registers a new client connection."""
+async def register_client(websocket) -> bool:
+    """Registers a newly connected client after receiving its identification handshake.
+
+    Args:
+        websocket: The connecting client's WebSocket instance.
+
+    Returns:
+        True if the client successfully identified and registered; False otherwise.
+    """
     client_ip = websocket.remote_address
-    logger.info(f"✅ New client connecting from: {client_ip}")
+    logger.info(f"New client connecting from: {client_ip}")
     try:
-        # Wait for the client to identify itself
-        message = await asyncio.wait_for(websocket.recv(), timeout=10.0) # 10 sec timeout
+        message = await asyncio.wait_for(websocket.recv(), timeout=CLIENT_REGISTRATION_TIMEOUT_SECONDS)
         data = json.loads(message)
         client_type = data.get('client_type', 'unknown_client')
 
@@ -164,45 +239,51 @@ async def register_client(websocket):
             'type': client_type,
             'address': client_ip
         }
-        logger.info(f"✅ Client {client_ip} registered as type: '{client_type}'")
+        logger.info(f"Client {client_ip} registered as type: '{client_type}'")
 
-        # Send welcome message
         await websocket.send(json.dumps({
             'type': 'welcome',
-            'message': f'Connected to Plant Disease Detection Server (Unified)',
+            'message': 'Connected to Plant Disease Detection Server (Unified)',
             'timestamp': datetime.now().isoformat()
         }))
         return True
 
     except asyncio.TimeoutError:
-         logger.warning(f"⚠️ Client {client_ip} did not identify itself in time. Closing connection.")
-         await websocket.close(reason='Identification timeout')
-         return False
+        logger.warning(f"Client {client_ip} did not identify itself in time. Closing connection.")
+        await websocket.close(reason='Identification timeout')
+        return False
     except websockets.exceptions.ConnectionClosed:
-         logger.warning(f"⚠️ Connection closed by {client_ip} during registration.")
-         return False
+        logger.warning(f"Connection closed by {client_ip} during registration.")
+        return False
     except json.JSONDecodeError:
-         logger.error(f"❌ Invalid identification message from {client_ip}. Closing connection.")
-         await websocket.close(reason='Invalid identification message')
-         return False
+        logger.error(f"Invalid identification message from {client_ip}. Closing connection.")
+        await websocket.close(reason='Invalid identification message')
+        return False
     except Exception as e:
-         logger.error(f"❌ Error during client registration ({client_ip}): {e}")
-         await websocket.close(reason='Registration error')
-         return False
+        logger.error(f"Error during client registration ({client_ip}): {e}")
+        await websocket.close(reason='Registration error')
+        return False
 
 
-async def unregister_client(websocket):
-    """Removes a client from the connected list."""
+async def unregister_client(websocket) -> None:
+    """Removes a disconnected client from the active client registry.
+
+    Args:
+        websocket: The WebSocket instance to remove.
+    """
     client_info = connected_clients.pop(websocket, None)
     if client_info:
-        logger.info(f"❌ Client disconnected: {client_info.get('address', 'Unknown IP')} (Type: {client_info.get('type', 'N/A')})")
+        logger.info(f"Client disconnected: {client_info.get('address', 'Unknown IP')} (Type: {client_info.get('type', 'N/A')})")
     else:
-        # This might happen if deregistered twice or connection closed before registration
-        logger.info(f"❌ Client disconnected (already removed or registration failed): {websocket.remote_address}")
+        logger.info(f"Client disconnected (already removed or registration failed): {websocket.remote_address}")
 
 
-async def handle_client_messages(websocket):
-    """Listens for messages (like ping) from a connected client."""
+async def handle_client_messages(websocket) -> None:
+    """Listens for inbound messages such as keepalive pings from a client session.
+
+    Args:
+        websocket: The active WebSocket client connection.
+    """
     client_ip = connected_clients.get(websocket, {}).get('address', websocket.remote_address)
     try:
         async for message in websocket:
@@ -213,22 +294,17 @@ async def handle_client_messages(websocket):
                 if msg_type == 'ping':
                     if websocket in connected_clients:
                         connected_clients[websocket]['last_ping'] = time.time()
-                        # logger.debug(f"Received ping from {client_ip}") # Too verbose for INFO
                         await websocket.send(json.dumps({
                             'type': 'pong',
                             'timestamp': datetime.now().isoformat()
                         }))
                     else:
-                         logger.warning(f"⚠️ Received ping from unregistered client? {client_ip}")
-
-                # Add handlers for other client message types if needed
-                # elif msg_type == 'some_other_command':
-                #    handle_other_command(data)
+                        logger.warning(f"Received ping from unregistered client? {client_ip}")
 
             except json.JSONDecodeError:
-                logger.error(f"❌ Invalid JSON received from {client_ip}: {message[:100]}...") # Log first 100 chars
+                logger.error(f"Invalid JSON received from {client_ip}: {message[:100]}...")
             except Exception as e:
-                logger.error(f"❌ Error processing message from {client_ip}: {e}")
+                logger.error(f"Error processing message from {client_ip}: {e}")
 
     except websockets.exceptions.ConnectionClosedOK:
         logger.info(f"Client {client_ip} closed connection gracefully.")
@@ -240,167 +316,159 @@ async def handle_client_messages(websocket):
         await unregister_client(websocket)
 
 
-async def client_handler(websocket, path="/"):
-    """Main entry point for handling a new WebSocket connection."""
+async def client_handler(websocket, path: str = "/") -> None:
+    """Top-level connection handler dispatching registration and message listening.
+
+    Args:
+        websocket: The newly established WebSocket instance.
+        path: Requested connection path.
+    """
     if await register_client(websocket):
         await handle_client_messages(websocket)
-    # unregister_client is called within handle_client_messages or register_client on failure
 
 
-async def broadcast_message(message_data):
-    """Sends a JSON message to all currently connected clients."""
+async def broadcast_message(message_data: Dict[str, Any]) -> None:
+    """Sends a JSON-serialized message payload concurrently to all registered clients.
+
+    Args:
+        message_data: Dictionary structure to serialize and transmit.
+    """
     if not connected_clients:
-        return # No clients to send to
+        return
 
     message_json = json.dumps(message_data)
-    # Create a list of tasks for sending messages concurrently
     tasks = [client.send(message_json) for client in connected_clients.keys()]
-
-    # Execute tasks and gather results (including potential exceptions)
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    # Process results to find failed sends and log/remove clients
     disconnected_clients = []
     for client, result in zip(list(connected_clients.keys()), results):
         if isinstance(result, Exception):
             client_ip = connected_clients.get(client, {}).get('address', client.remote_address)
-            logger.error(f"❌ Failed to send message to client {client_ip}: {result}")
+            logger.error(f"Failed to send message to client {client_ip}: {result}")
             disconnected_clients.append(client)
-            # Force close the connection on the server side
             try:
-                 await client.close(reason="Send failed")
+                await client.close(reason="Send failed")
             except:
-                 pass # Ignore errors during close, client might already be gone
+                pass
 
-    # Remove clients that failed to receive the message
     for client in disconnected_clients:
-        await unregister_client(client) # Use the unregister function
+        await unregister_client(client)
 
 
-async def check_client_timeouts():
-    """Periodically checks for clients that haven't pinged recently."""
-    logger.info("⏲️ Starting client timeout checker...")
+async def check_client_timeouts() -> None:
+    """Periodically verifies client keepalives and terminates timed-out connections."""
+    logger.info("Starting client timeout checker...")
     while True:
         try:
-             await asyncio.sleep(PING_INTERVAL) # Check every PING_INTERVAL seconds
-             current_time = time.time()
-             timed_out_clients = []
+            await asyncio.sleep(PING_INTERVAL)
+            current_time = time.time()
+            timed_out_clients = []
 
-             # Iterate safely over a copy of the keys
-             for client, info in list(connected_clients.items()):
-                 if current_time - info['last_ping'] > PING_TIMEOUT:
-                     client_ip = info.get('address', client.remote_address)
-                     logger.warning(f"⚠️ Client timed out: {client_ip} (Type: {info.get('type', 'N/A')}). Last ping: {info['last_ping']:.2f}")
-                     timed_out_clients.append(client)
-                     # Force close the connection
-                     try:
-                          await client.close(reason='Ping timeout')
-                     except Exception as e:
-                          logger.error(f"Error closing timed out client {client_ip}: {e}")
+            for client, info in list(connected_clients.items()):
+                if current_time - info['last_ping'] > PING_TIMEOUT:
+                    client_ip = info.get('address', client.remote_address)
+                    logger.warning(f"Client timed out: {client_ip} (Type: {info.get('type', 'N/A')}). Last ping: {info['last_ping']:.2f}")
+                    timed_out_clients.append(client)
+                    try:
+                        await client.close(reason='Ping timeout')
+                    except Exception as e:
+                        logger.error(f"Error closing timed out client {client_ip}: {e}")
 
-
-             # Remove timed out clients from the main dictionary
-             for client in timed_out_clients:
-                 await unregister_client(client) # Use the unregister function
+            for client in timed_out_clients:
+                await unregister_client(client)
 
         except asyncio.CancelledError:
-             logger.info("Client timeout checker cancelled.")
-             break
+            logger.info("Client timeout checker cancelled.")
+            break
         except Exception as e:
-             logger.error(f"❌ Error in client timeout checker: {e}")
-             await asyncio.sleep(10) # Wait a bit before retrying after an error
+            logger.error(f"Error in client timeout checker: {e}")
+            await asyncio.sleep(TIMEOUT_RETRY_INTERVAL_SECONDS)
 
 
-async def process_frame_for_detection(frame):
-    """Processes a single frame for disease detection."""
+async def process_frame_for_detection(frame: np.ndarray) -> bool:
+    """Runs deep learning inference on a frame and broadcasts alerts if disease is found.
+
+    Args:
+        frame: RGB image array from camera.
+
+    Returns:
+        True if a disease above threshold was detected and broadcast; False otherwise.
+    """
     if model is None:
-        # logger.warning("Model not loaded, skipping detection.")
-        return # Silently skip if model isn't ready
+        return False
 
     try:
         processed_img = preprocess_frame_for_model(frame)
         if processed_img is None:
-            return # Preprocessing failed
+            return False
 
-        # Make prediction
-        predictions = model.predict(processed_img, verbose=0) # verbose=0 prevents Keras logs per prediction
+        predictions = model.predict(processed_img, verbose=0)
         class_index = np.argmax(predictions[0])
-        confidence = float(predictions[0][class_index]) # Ensure it's a standard float
+        confidence = float(predictions[0][class_index])
 
         if confidence >= DETECTION_THRESHOLD:
             disease_name = CLASS_NAMES[class_index]
             
-            # Skip if the detected class is a healthy plant
+            # Healthy foliage does not warrant pharmaceutical treatment alert
             if "healthy" in disease_name.lower():
-                # logger.info(f"🌿 Healthy plant detected ({confidence*100:.1f}%), skipping notification")
                 return False
                 
-            logger.info(f"🔍 Potential Detection: {disease_name} ({confidence*100:.1f}%)")
+            logger.info(f"Potential Detection: {disease_name} ({confidence*100:.1f}%)")
 
-            # Fetch treatment info
             treatment_info = get_treatment_info(disease_name)
 
             if treatment_info:
-                # Prepare annotated frame (optional, but good for debugging/confirmation)
                 annotated_frame = frame.copy()
                 text = f"{treatment_info['disease']} ({confidence*100:.1f}%)"
                 cv2.putText(annotated_frame, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX,
                             0.7, (0, 255, 0), 2, cv2.LINE_AA)
 
-                # Encode the annotated frame for the detection message
-                encoded_annotated_frame = encode_frame(annotated_frame, quality=80) # Use slightly higher quality for detection frame
+                encoded_annotated_frame = encode_frame(annotated_frame, quality=DETECTION_IMAGE_QUALITY)
 
                 if encoded_annotated_frame:
                     detection_data = {
                         'type': 'detection',
                         'timestamp': datetime.now().isoformat(),
-                        'status': 'detection', # Consistent status field
+                        'status': 'detection',
                         'disease_name': treatment_info['disease'],
-                        'confidence': confidence, # Send as float
+                        'confidence': confidence,
                         'treatment_en': treatment_info['treatment_en'],
                         'treatment_ar': treatment_info['treatment_ar'],
                         'resources': treatment_info['resources'],
-                        'image': encoded_annotated_frame # Base64 encoded annotated image
+                        'image': encoded_annotated_frame
                     }
                     await broadcast_message(detection_data)
-                    logger.info(f"✅ Sent detection data for: {treatment_info['disease']}")
-                    return True # Indicate detection occurred
+                    logger.info(f"Sent detection data for: {treatment_info['disease']}")
+                    return True
             else:
-                # Disease detected but no treatment info found
-                 logger.warning(f"Detected '{disease_name}' but no treatment info available.")
-                 # Optionally send a message without treatment details if needed
-                 # Or just log it as done here.
-        # else: # Confidence below threshold
-            # logger.debug(f"Confidence below threshold ({confidence*100:.1f}%) for class {CLASS_NAMES[class_index]}")
+                logger.warning(f"Detected '{disease_name}' but no treatment info available.")
 
     except Exception as e:
-        logger.error(f"❌ Error during disease detection processing: {e}")
+        logger.error(f"Error during disease detection processing: {e}")
 
-    return False # Indicate no detection was sent
+    return False
 
 
-async def run_camera_and_stream():
-    """Main loop for capturing frames, streaming, and detecting."""
+async def run_camera_and_stream() -> None:
+    """Manages continuous camera acquisition, video streaming, and detection cooldown."""
     global picam2
-    logger.info("📷 Initializing Camera...")
+    logger.info("Initializing Camera...")
     try:
         picam2 = Picamera2()
-        # Configure for preview (lower res faster processing) and still (higher res maybe?)
-        # We'll use the preview configuration's main stream for processing
         config = picam2.create_preview_configuration(
             main={"size": CAMERA_RESOLUTION},
-            lores={"size": (320, 240)}, # Optional low-res stream if needed later
-            encode="main", # Use main stream for encoding output if saving video
-            controls={"FrameRate": CAMERA_FRAMERATE} # Set framerate
+            lores={"size": LORES_RESOLUTION},
+            encode="main",
+            controls={"FrameRate": CAMERA_FRAMERATE}
         )
         picam2.configure(config)
         picam2.start()
-        logger.info(f"✅ Camera started with resolution {CAMERA_RESOLUTION} @ {CAMERA_FRAMERATE}fps.")
-        await asyncio.sleep(2) # Allow camera to warm up
+        logger.info(f"Camera started with resolution {CAMERA_RESOLUTION} @ {CAMERA_FRAMERATE}fps.")
+        await asyncio.sleep(CAMERA_WARMUP_SECONDS)
     except Exception as e:
-        logger.error(f"❌ Failed to initialize camera: {e}")
-        picam2 = None # Ensure picam2 is None if initialization failed
-        return # Cannot proceed without camera
+        logger.error(f"Failed to initialize camera: {e}")
+        picam2 = None
+        return
 
     last_detection_attempt_time = 0
     frame_count = 0
@@ -409,68 +477,52 @@ async def run_camera_and_stream():
     try:
         while True:
             if not connected_clients:
-                # No clients connected, pause camera processing to save resources
-                # logger.info("No clients connected, pausing camera stream...")
-                await asyncio.sleep(1.0) # Check for clients every second
-                # Reset frame rate calculation when resuming
+                await asyncio.sleep(IDLE_CLIENT_CHECK_INTERVAL_SECONDS)
                 frame_count = 0
                 start_time = time.time()
-                continue # Skip the rest of the loop
+                continue
 
-            # Capture frame
             try:
-                frame = picam2.capture_array("main") # Capture from main stream
-                # Picamera2 captures in BGR order by default with capture_array,
-                # but TensorFlow models usually expect RGB. Convert if necessary.
+                frame = picam2.capture_array("main")
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             except Exception as e:
-                 logger.error(f"❌ Error capturing frame: {e}")
-                 await asyncio.sleep(0.5) # Wait before retrying capture
-                 continue
+                logger.error(f"Error capturing frame: {e}")
+                await asyncio.sleep(CAPTURE_RETRY_BACKOFF_SECONDS)
+                continue
 
-
-            # 1. Stream the current frame (RGB)
+            # Stream current RGB frame
             encoded_frame = encode_frame(frame_rgb, quality=STREAM_QUALITY)
             if encoded_frame:
                 stream_data = {
                     'type': 'camera_frame',
                     'timestamp': datetime.now().isoformat(),
-                    'image': encoded_frame # Base64 encoded RGB frame
+                    'image': encoded_frame
                 }
                 await broadcast_message(stream_data)
             else:
-                logger.warning("⚠️ Failed to encode frame for streaming.")
+                logger.warning("Failed to encode frame for streaming.")
 
-
-            # 2. Check for disease detection (with cooldown)
+            # Run detection if cooldown elapsed
             current_time = time.time()
             if current_time - last_detection_attempt_time >= DETECTION_COOLDOWN:
                 last_detection_attempt_time = current_time
-                # Run detection in a separate task to avoid blocking the stream loop?
-                # For simplicity now, run it directly. If it's slow, consider asyncio.create_task
-                detection_occured = await process_frame_for_detection(frame_rgb) # Use RGB frame for detection
-                # Optional: Can add a 'no_detection' message broadcast here if needed
+                await process_frame_for_detection(frame_rgb)
 
-
-            # Calculate and log FPS occasionally
+            # Performance monitoring
             frame_count += 1
             elapsed_time = time.time() - start_time
-            if elapsed_time >= 10.0: # Log FPS every 10 seconds
+            if elapsed_time >= FPS_REPORT_INTERVAL_SECONDS:
                 fps = frame_count / elapsed_time
                 logger.info(f"Streaming FPS: {fps:.2f}")
                 frame_count = 0
                 start_time = time.time()
 
-
-            # Control loop speed - aim for target framerate
-            # This simple sleep might not be precise, more advanced timing could be used.
             await asyncio.sleep(1.0 / CAMERA_FRAMERATE)
-
 
     except asyncio.CancelledError:
         logger.info("Camera streaming task cancelled.")
     except Exception as e:
-        logger.error(f"❌ Unexpected error in camera/stream loop: {e}", exc_info=True) # Log traceback
+        logger.error(f"Unexpected error in camera/stream loop: {e}", exc_info=True)
     finally:
         if picam2:
             logger.info("Stopping camera...")
@@ -478,54 +530,50 @@ async def run_camera_and_stream():
             logger.info("Camera stopped.")
 
 
-async def main():
-    """Initializes resources and starts server tasks."""
+async def main() -> None:
+    """Bootstraps background services and runs the unified WebSocket server."""
     logger.info("--- Starting Unified WebSocket Server ---")
     logger.info(f"Python version: {sys.version}")
     logger.info(f"WebSocket Host: {WEBSOCKET_HOST}")
     logger.info(f"WebSocket Port: {WEBSOCKET_PORT}")
 
-    # Load model and treatment data first
     if not load_resources():
-        logger.error("❌ Failed to load critical resources. Server cannot start.")
-        return # Exit if resources failed to load
+        logger.error("Failed to load critical resources. Server cannot start.")
+        return
 
-    # Start the WebSocket server
     server = await websockets.serve(
         client_handler,
         WEBSOCKET_HOST,
         WEBSOCKET_PORT,
-        ping_interval=None, # Disable automatic pings from server (we handle manually)
-        ping_timeout=None   # Disable automatic timeouts from server (we handle manually)
+        ping_interval=None,
+        ping_timeout=None
     )
-    logger.info(f"✅ WebSocket server listening on ws://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}")
+    logger.info(f"WebSocket server listening on ws://{WEBSOCKET_HOST}:{WEBSOCKET_PORT}")
 
-    # Start background tasks
     timeout_task = asyncio.create_task(check_client_timeouts())
     camera_task = asyncio.create_task(run_camera_and_stream())
 
-    # Keep the main task running until tasks are done or interrupted
     try:
         await asyncio.gather(timeout_task, camera_task)
     except asyncio.CancelledError:
-         logger.info("Main task cancelled.")
+        logger.info("Main task cancelled.")
     finally:
         logger.info("Shutting down server...")
-        # Cancel background tasks explicitly
-        if not timeout_task.done(): timeout_task.cancel()
-        if not camera_task.done(): camera_task.cancel()
-        # Wait for tasks to finish cancelling
+        if not timeout_task.done():
+            timeout_task.cancel()
+        if not camera_task.done():
+            camera_task.cancel()
         await asyncio.gather(timeout_task, camera_task, return_exceptions=True)
 
         server.close()
         await server.wait_closed()
-        logger.info("✅ Server shutdown complete.")
+        logger.info("Server shutdown complete.")
 
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info("\n⚠️ Received keyboard interrupt, initiating shutdown...")
+        logger.info("Received keyboard interrupt, initiating shutdown...")
     except Exception as e:
-        logger.critical(f"💥 Unhandled exception in main execution: {e}", exc_info=True)
+        logger.critical(f"Unhandled exception in main execution: {e}", exc_info=True)

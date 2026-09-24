@@ -1,9 +1,22 @@
-"""
-Single source of truth for plant disease detection class names and normalization.
+"""Canonical class labels and disease normalization utilities for Farmer Eye.
+
+This module serves as the single source of truth for the 25 plant condition
+classes across the project pipeline. It provides deterministic indexing matching
+the neural network output nodes and a normalization function to bridge naming
+discrepancies between model predictions and the treatment database.
+
+Usage:
+    Imported as a library module across inference, evaluation, and training:
+        from src.class_names import CLASS_NAMES, normalize_disease_name
+
+Pipeline Context:
+    1. Model output vector (argmax index 0..24) -> CLASS_NAMES[index]
+    2. Predicted class name -> normalize_disease_name() -> Excel lookup
 """
 import re
 
-CLASS_NAMES = [
+# Canonical 25-class list matching the neural network's final softmax output layer.
+CLASS_NAMES: list[str] = [
     'Aphids_cotton',
     'Army worm_cotton',
     'Bacterial blight_cotton',
@@ -33,16 +46,25 @@ CLASS_NAMES = [
 
 
 def normalize_disease_name(name: str) -> str:
-    """
-    Normalizes a disease name for tolerant lookup against the treatment database:
-    - Lowercases text
-    - Strips leading and trailing whitespace
-    - Collapses multiple underscores and whitespace into a single space
-    - Handles the common transcription typo 'bellhealthy' -> 'bell healthy'
+    """Normalizes a disease label for tolerant lookup against the treatment database.
+
+    Different sources format disease names with varying numbers of underscores
+    (e.g., 'Potato__Early_blight' vs 'Potato_Early_blight'), irregular spaces,
+    or casing. This function maps all representations to a canonical normalized
+    string to ensure consistent database joins without modifying the raw Excel file.
+
+    Args:
+        name: The raw predicted disease name or database entry string.
+
+    Returns:
+        The normalized lowercase string with single spaces, or an empty string
+        if the input is None or not a string.
     """
     if not isinstance(name, str):
         return ""
+    # Lowercase and replace runs of whitespace and underscores with a single space.
     s = name.strip().lower()
     s = re.sub(r'[\s_]+', ' ', s)
+    # Correct known transcription anomaly present in the treatment reference sheet.
     s = re.sub(r'\bbellhealthy\b', 'bell healthy', s)
     return s.strip()
