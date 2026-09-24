@@ -1,11 +1,12 @@
 <div align="center">
   <h1>Smart Vehicle for Plant Diseases Detection and Classification Using AI and IoT (Farmer Eye Robotic Car)</h1>
-  <p>An edge-AI precision agriculture system combining mobile robotics, computer vision, and IoT to detect crop diseases in real time. | <a href="https://lnkd.in/p/epwcGhRv"><b>Watch Demo</b></a></p>
+  <p>A real-time robotic vision system that detects plant diseases directly in the field using an edge AI pipeline running on Raspberry Pi. | <a href="https://lnkd.in/p/epwcGhRv"><b>Watch Demo</b></a></p>
 
   <p>
     <a href="https://github.com/mariiammaysara/FarmerEye/actions/workflows/tests.yml"><img src="https://github.com/mariiammaysara/FarmerEye/actions/workflows/tests.yml/badge.svg" alt="Tests Status"></a>
-    <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.10%2B-blue.svg" alt="Python 3.10+"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT"></a>
+    <img src="https://img.shields.io/badge/Classes-25%20Categories-2ea44f" alt="25 Disease Categories">
+    <img src="https://img.shields.io/badge/Inference-Edge%20AI-orange" alt="Edge AI">
+    <img src="https://img.shields.io/badge/Platform-Raspberry%20Pi%204-purple" alt="Raspberry Pi 4">
   </p>
 
   <p>
@@ -15,8 +16,9 @@
   <p>
     <a href="#what-it-does"><b>Overview</b></a> •
     <a href="#system-architecture"><b>Architecture</b></a> •
-    <a href="#quick-start"><b>Quick Start</b></a> •
     <a href="#results-snapshot"><b>Results</b></a> •
+    <a href="#tech-stack"><b>Tech Stack</b></a> •
+    <a href="#quick-start"><b>Quick Start</b></a> •
     <a href="#documentation"><b>Documentation</b></a> •
     <a href="#credits--acknowledgments"><b>Credits</b></a>
   </p>
@@ -44,6 +46,16 @@ graph LR
     DB --> EdgeServer
     EdgeServer <-->|"WebSocket: ws://<IP>:8765"| App[Mobile Client]
 ```
+
+---
+
+## Results Snapshot
+
+Evaluated on an independent holdout test set of 7,955 images:
+- **Test Accuracy**: 97.95%
+- **Macro Average F1-Score**: 0.98
+
+*For complete 25-class precision, recall, confusion matrix heatmaps, and training curves, see [docs/model.md](docs/model.md).*
 
 ---
 
@@ -85,15 +97,6 @@ python src/combined_detection_stream.py
 
 ---
 
-## Results Snapshot
-
-Evaluated on an independent holdout test set of 7,955 images:
-- **Test Accuracy**: 97.95%
-- **Macro Average F1-Score**: 0.98
-
-*For complete 25-class precision, recall, confusion matrix heatmaps, and training curves, see [docs/model.md](docs/model.md).*
-
----
 
 ## Documentation
 
