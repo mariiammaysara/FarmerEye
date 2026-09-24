@@ -143,6 +143,11 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-# Model and Data (Optional: ignore if they are huge)
-# data/
-# models/
+# Raw datasets and image files
+data/*
+!data/plant_disease_data.xlsx
+!data/README.md
+
+# Converted TFLite models
+models_tflite/
+*.tflite

@@ -1,5 +1,33 @@
-# Load the necessary libraries
+"""Standalone model research, training, and offline evaluation script for Farmer Eye.
+
+Purpose:
+    Performs end-to-end dataset loading, image integrity validation, data augmentation,
+    CNN architecture construction, model training with learning rate scheduling and early
+    stopping, comprehensive diagnostic evaluation (confusion matrices, ROC/PR curves,
+    saliency maps, noise perturbation robustness), optional fine-tuning, and model export.
+    This module represents the complete research pipeline extracted from the project's
+    training notebook.
+
+How It Is Run:
+    Executed directly on an offline training workstation or GPU machine:
+        python src/app.py
+
+Inputs:
+    - Raw plant disease images organized into class subdirectories located at:
+      data/plantvillage dataset/color/<class_folder>/
+    - Advisory treatment database located at:
+      data/plant disease.xlsx (or legacy local path)
+Outputs:
+    - plant_disease_model_final.h5: Trained Keras/TensorFlow model weights.
+    - Diagnostic figures and performance curves displayed during offline evaluation.
+
+Pipeline Placement:
+    Research, training, and offline evaluation stage. Precedes model quantization
+    (src/convert_tflite.py) and edge real-time inference (src/real_time_detection.py).
+"""
+
 import os
+from typing import Any
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -22,6 +50,30 @@ from sklearn.metrics import precision_recall_curve, average_precision_score
 from sklearn.preprocessing import label_binarize
 from tensorflow.keras import backend as K
 
+# Training hyperparameter constants
+TARGET_IMG_SIZE: tuple[int, int] = (224, 224)
+INPUT_SHAPE: tuple[int, int, int] = (224, 224, 3)
+TEST_SPLIT_RATIO: float = 0.2
+VAL_SPLIT_RATIO: float = 0.2
+RANDOM_SEED: int = 42
+BATCH_SIZE: int = 32
+INITIAL_EPOCHS: int = 50
+FINETUNE_EPOCHS: int = 10
+EARLY_STOPPING_PATIENCE: int = 10
+REDUCE_LR_PATIENCE: int = 5
+REDUCE_LR_FACTOR: float = 0.2
+REDUCE_LR_MIN: float = 0.00001
+FINETUNE_LEARNING_RATE: float = 0.00001
+DROPOUT_RATE: float = 0.5
+DEFAULT_NOISE_FACTOR: float = 0.1
+
+# Data augmentation constants
+AUGMENTATION_ROTATION_RANGE: int = 20
+AUGMENTATION_WIDTH_SHIFT: float = 0.1
+AUGMENTATION_HEIGHT_SHIFT: float = 0.1
+AUGMENTATION_SHEAR_RANGE: float = 0.2
+AUGMENTATION_ZOOM_RANGE: float = 0.2
+
 # Define the root directory containing the image dataset organized by class folders.
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 data_dir = os.path.join(BASE_DIR, 'data', 'plantvillage dataset', 'color')
@@ -43,20 +95,27 @@ for class_folder in class_folders:
         image_paths.append(image_path)
         labels.append(class_folder)
 
-# Function to validate image files, ensuring they can be opened and are not corrupted.
-def validate_images(image_paths):
-    """
-    Validate images and return a list of valid image paths.
+
+def validate_images(image_paths: list[str]) -> list[str]:
+    """Validates image files by verifying integrity and readability via PIL and OpenCV.
+
+    Ensures corrupt or unreadable files do not cause training failures during batch loading.
+
+    Args:
+        image_paths: Sequence of filesystem paths to candidate image files.
+
+    Returns:
+        List of verified, non-corrupt filesystem paths that successfully decoded.
     """
     valid_paths = []
     corrupted_paths = []
     
     for img_path in image_paths:
         try:
-            # Try to open the image with PIL
+            # Verify file structure integrity using PIL before attempting pixel decoding
             with Image.open(img_path) as img:
-                img.verify()  # Verify it's actually an image
-                # Try to load it with cv2 as well
+                img.verify()
+                # Verify decoding to numpy array via OpenCV
                 cv_img = cv2.imread(img_path)
                 if cv_img is not None:
                     valid_paths.append(img_path)
@@ -77,6 +136,7 @@ def validate_images(image_paths):
             print(path)
     
     return valid_paths
+
 
 # Validate images before creating the DataFrame
 print("Validating images...")
@@ -126,8 +186,8 @@ class_labels_dict = {class_label: idx for idx, class_label in enumerate(np.uniqu
 df['label'] = df['label'].map(class_labels_dict)
 
 # Split the data into training, validation, and test sets. Stratify to maintain class proportions.
-train_df, test_df = train_test_split(df, test_size=0.2, random_state=42, stratify=df['label'])
-train_df, val_df = train_test_split(train_df, test_size=0.2, random_state=42, stratify=train_df['label'])
+train_df, test_df = train_test_split(df, test_size=TEST_SPLIT_RATIO, random_state=RANDOM_SEED, stratify=df['label'])
+train_df, val_df = train_test_split(train_df, test_size=VAL_SPLIT_RATIO, random_state=RANDOM_SEED, stratify=train_df['label'])
 train_df.shape, val_df.shape, test_df.shape
 
 # Convert numerical labels back to strings for ImageDataGenerator compatibility.
@@ -139,11 +199,11 @@ print(train_df['label'].unique())
 # Define ImageDataGenerators for training (with augmentation), validation, and testing (only rescaling).
 train_datagen = ImageDataGenerator(
     rescale=1./255,
-    rotation_range=20,
-    width_shift_range=0.1,
-    height_shift_range=0.1,
-    shear_range=0.2,
-    zoom_range=0.2,
+    rotation_range=AUGMENTATION_ROTATION_RANGE,
+    width_shift_range=AUGMENTATION_WIDTH_SHIFT,
+    height_shift_range=AUGMENTATION_HEIGHT_SHIFT,
+    shear_range=AUGMENTATION_SHEAR_RANGE,
+    zoom_range=AUGMENTATION_ZOOM_RANGE,
     horizontal_flip=True,
     fill_mode='nearest',
 )
@@ -152,21 +212,27 @@ test_datagen = ImageDataGenerator(rescale=1./255)
 
 # Create data generators that flow data from the DataFrames.
 train_generator = train_datagen.flow_from_dataframe(
-    train_df, x_col='image_path', y_col='label', target_size=(224, 224),
-    batch_size=32, class_mode='categorical', shuffle=True, seed=42
+    train_df, x_col='image_path', y_col='label', target_size=TARGET_IMG_SIZE,
+    batch_size=BATCH_SIZE, class_mode='categorical', shuffle=True, seed=RANDOM_SEED
 )
 val_generator = val_datagen.flow_from_dataframe(
-    val_df, x_col='image_path', y_col='label', target_size=(224, 224),
-    batch_size=32, class_mode='categorical', shuffle=False
+    val_df, x_col='image_path', y_col='label', target_size=TARGET_IMG_SIZE,
+    batch_size=BATCH_SIZE, class_mode='categorical', shuffle=False
 )
 test_generator = test_datagen.flow_from_dataframe(
-    test_df, x_col='image_path', y_col='label', target_size=(224, 224),
-    batch_size=32, class_mode='categorical', shuffle=False
+    test_df, x_col='image_path', y_col='label', target_size=TARGET_IMG_SIZE,
+    batch_size=BATCH_SIZE, class_mode='categorical', shuffle=False
 )
 print(f'Training samples: {train_generator.samples}, Validation samples: {val_generator.samples}, Test samples: {test_generator.samples}')
 
-# Helper function to display a batch of images from a generator.
-def show_images(image_gen):
+
+def show_images(image_gen: Any) -> None:
+    """Displays a grid of augmented sample images extracted from an ImageDataGenerator batch.
+
+    Args:
+        image_gen: Keras DirectoryIterator or DataFrameIterator yielding
+            (images, labels) batches.
+    """
     class_dict = image_gen.class_indices
     classes = list(class_dict.keys())
     images, labels = next(image_gen)
@@ -182,11 +248,12 @@ def show_images(image_gen):
         plt.axis('off')
     plt.show()
 
+
 # Show example augmented images from the training generator.
 show_images(train_generator)
 
 # Define model parameters.
-input_shape = (224, 224, 3)
+input_shape = INPUT_SHAPE
 n_classes = len(train_generator.class_indices)
 
 # Build the Convolutional Neural Network (CNN) model architecture.
@@ -227,7 +294,7 @@ model = keras.Sequential([
     keras.layers.BatchNormalization(),
     keras.layers.Activation('relu'),
     keras.layers.Dense(256, activation='relu'),
-    keras.layers.Dropout(0.5),
+    keras.layers.Dropout(DROPOUT_RATE),
     keras.layers.Dense(n_classes, activation='softmax')
 ])
 
@@ -242,15 +309,15 @@ model.compile(
 model.summary()
 
 # Define callbacks for early stopping and learning rate reduction during training.
-early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
-reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=0.00001)
+early_stopping = EarlyStopping(monitor='val_loss', patience=EARLY_STOPPING_PATIENCE, restore_best_weights=True)
+reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=REDUCE_LR_FACTOR, patience=REDUCE_LR_PATIENCE, min_lr=REDUCE_LR_MIN)
 
 # Train the model using the prepared data generators and callbacks.
 history = model.fit(
     train_generator, 
-    batch_size=32,
+    batch_size=BATCH_SIZE,
     validation_data=val_generator,
-    epochs=50,
+    epochs=INITIAL_EPOCHS,
     callbacks=[early_stopping, reduce_lr]
 )
 
@@ -270,7 +337,7 @@ class_names_list = list(test_generator.class_indices.keys())
 plt.figure(figsize=(15, 15))
 for i, idx in enumerate(misclassified_indices[:9]): # Show first 9 errors
     img_path = test_df.iloc[idx]['image_path']
-    img = keras_image.load_img(img_path, target_size=(224, 224))
+    img = keras_image.load_img(img_path, target_size=TARGET_IMG_SIZE)
     plt.subplot(3, 3, i+1)
     plt.imshow(img)
     true_label_name = class_names_list[test_true_labels[idx]]
@@ -598,7 +665,7 @@ print(layer_df.to_string(index=False))
 
 # Analyze prediction time
 import time
-batch_size = 32
+batch_size = BATCH_SIZE
 n_samples = len(test_generator.labels)
 prediction_times = []
 
@@ -626,10 +693,20 @@ plt.ylabel('Count')
 plt.tight_layout()
 plt.show()
 
-# Analyze model robustness to input variations
-def apply_noise(image, noise_factor=0.1):
+
+def apply_noise(image: np.ndarray, noise_factor: float = DEFAULT_NOISE_FACTOR) -> np.ndarray:
+    """Applies additive Gaussian white noise to an image array to assess model perturbation robustness.
+
+    Args:
+        image: Input image array with pixel values scaled in range [0.0, 1.0].
+        noise_factor: Standard deviation scaling multiplier for generated normal noise.
+
+    Returns:
+        Perturbed image array clipped to range [0.0, 1.0].
+    """
     noisy_image = image + noise_factor * np.random.normal(loc=0.0, scale=1.0, size=image.shape)
     return np.clip(noisy_image, 0., 1.)
+
 
 # Test model with different noise levels
 noise_levels = [0.0, 0.1, 0.2, 0.3]
@@ -653,8 +730,15 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-# Visualize feature maps for a sample image
-def visualize_feature_maps(model, image, layer_name):
+
+def visualize_feature_maps(model: Any, image: np.ndarray, layer_name: str) -> None:
+    """Extracts and renders intermediate convolutional activation maps for an input image.
+
+    Args:
+        model: Trained Keras Sequential or Functional model instance.
+        image: Single preprocessed 3D input image array of shape (height, width, channels).
+        layer_name: Identifier name of the convolutional layer to inspect.
+    """
     layer_model = tf.keras.Model(inputs=model.input, outputs=model.get_layer(layer_name).output)
     feature_maps = layer_model.predict(np.expand_dims(image, axis=0))
     
@@ -670,14 +754,25 @@ def visualize_feature_maps(model, image, layer_name):
     plt.tight_layout()
     plt.show()
 
+
 # Visualize feature maps for a sample image
 sample_image = next(test_generator)[0][0]
 conv_layers = [layer.name for layer in model.layers if 'conv' in layer.name.lower()]
 if conv_layers:
     visualize_feature_maps(model, sample_image, conv_layers[0])
 
-# Add saliency map visualization
-def compute_saliency_map(model, image, class_idx):
+
+def compute_saliency_map(model: Any, image: np.ndarray, class_idx: int) -> np.ndarray:
+    """Computes vanilla gradient saliency map highlighting influential input pixels for class prediction.
+
+    Args:
+        model: Trained Keras model with differentiable operations.
+        image: Single preprocessed input image array of shape (height, width, channels).
+        class_idx: Integer target class index for which gradients are computed.
+
+    Returns:
+        2D array of normalized pixel gradient magnitudes across color channels.
+    """
     image_tensor = tf.convert_to_tensor(np.expand_dims(image, axis=0))
     with tf.GradientTape() as tape:
         tape.watch(image_tensor)
@@ -686,6 +781,7 @@ def compute_saliency_map(model, image, class_idx):
     gradients = tape.gradient(loss, image_tensor)
     saliency_map = tf.reduce_max(tf.abs(gradients), axis=-1)
     return saliency_map[0].numpy()
+
 
 # Visualize saliency maps for correctly classified images
 plt.figure(figsize=(15, 5))
@@ -708,18 +804,18 @@ for i, idx in enumerate(correct_indices):
 plt.tight_layout()
 plt.show()
 
-# --- Optional Fine-Tuning Phase ---
+# Fine-Tuning Phase
 print("\n--- Starting Fine-Tuning ---")
 for layer in model.layers: 
     layer.trainable = True
 
-learning_rate_finetune = 0.00001
+learning_rate_finetune = FINETUNE_LEARNING_RATE
 model.compile(optimizer=Adam(learning_rate=learning_rate_finetune),
             loss='categorical_crossentropy',
             metrics=['accuracy'])
 model.summary()
 
-epochs_finetune = 10
+epochs_finetune = FINETUNE_EPOCHS
 history_finetune = model.fit(
     train_generator,
     epochs=epochs_finetune, 
@@ -766,7 +862,7 @@ if 'loss' in available_metrics:
 plt.tight_layout()
 plt.show()
 
-# --- Post Fine-Tuning Evaluation ---
+# Post Fine-Tuning Evaluation
 test_predictions_ft = model.predict(test_generator)
 test_predicted_labels_ft = np.argmax(test_predictions_ft, axis=1)
 conf_matrix_ft = confusion_matrix(test_true_labels, test_predicted_labels_ft)
@@ -802,14 +898,25 @@ try:
 except Exception as e:
     print(f"Error creating ROC curves: {str(e)}")
 
-# --- Prediction Function and Example ---
-def predict(model, img_array, class_names_list):
+
+def predict(model: Any, img_array: np.ndarray, class_names_list: list[str]) -> tuple[str, float]:
+    """Generates a class label and percentage confidence score for a single image array.
+
+    Args:
+        model: Trained Keras model instance.
+        img_array: Preprocessed single image array of shape (height, width, channels).
+        class_names_list: Ordered sequence of string class names matching model output nodes.
+
+    Returns:
+        Tuple of (predicted_class_name, confidence_percentage) rounded to 2 decimal places.
+    """
     img_batch = tf.expand_dims(img_array, 0) # Create batch
     predictions = model.predict(img_batch)
     predicted_index = np.argmax(predictions[0])
     predicted_class = class_names_list[predicted_index]
     confidence = round(100 * np.max(predictions[0]), 2)
     return predicted_class, confidence
+
 
 # Example: Predict labels for a few images from the test batch.
 images_batch, labels_batch = next(test_generator)
@@ -818,7 +925,7 @@ for i in range(min(len(images_batch), 5)):
     actual_class = class_names_list[np.argmax(labels_batch[i])]
     print(f"Img {i+1} - Actual: {actual_class}, Predicted: {predicted_class}, Confidence: {confidence}%")
 
-# --- Save and Load Model ---
+# Save and Load Model
 # Save the final trained model.
 model_save_path = 'plant_disease_model_final.h5'
 model.save(model_save_path)
@@ -842,12 +949,12 @@ predicted_class_index = {
     22: "Tomato___Target_Spot", 23: "Tomato___Tomato_mosaic_virus", 24: "Tomato___Tomato_Yellow_Leaf_Curl_Virus"
 }
 
-# --- Prediction on a New Image and Treatment Lookup ---
+# Prediction on a New Image and Treatment Lookup
 # Define path to a new image for prediction.
 new_image_path = "G:/ksiu/Level 4/Graduation Project (AIE493) Dr. Saeed/graduation project/code ai & Data/plantvillage dataset/color/Healthy_cotton/16.jpg"
 
 # Load and preprocess the new image.
-new_image = keras_image.load_img(new_image_path, target_size=(224, 224))
+new_image = keras_image.load_img(new_image_path, target_size=TARGET_IMG_SIZE)
 new_image_array = keras_image.img_to_array(new_image)
 new_image_array = np.expand_dims(new_image_array, axis=0)
 new_image_array = new_image_array / 255.0
@@ -872,7 +979,7 @@ plt.imshow(new_image)
 plt.title(f"Predicted: {predicted_class_label}\nConfidence: {confidence_score}%")
 plt.axis('off'); plt.show()
 
-# --- Look up Treatment Information ---
+# Look up Treatment Information
 # Read treatment data from an Excel file.
 treatment_file_path = "G:/ksiu/Level 4/Graduation Project (AIE493) Dr. Saeed/graduation project/code ai & Data/plant disease.xlsx"
 try:
