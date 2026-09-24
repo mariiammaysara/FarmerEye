@@ -1,12 +1,10 @@
-numpy
-pandas
-matplotlib
-seaborn
-pillow
-opencv-python
-scikit-learn
-tensorflow
-keras
-websockets
-openpyxl
-# picamera2 # Required for Raspberry Pi, comment out for local development if not on Pi
+# Runtime dependencies for Farmer Eye (Raspberry Pi / Edge Device)
+# Note: picamera2 must NOT be pip-installed; install via apt on Raspberry Pi OS:
+#       sudo apt install -y python3-picamera2
+
+numpy>=1.24.0,<2.0.0
+pandas>=2.0.0,<3.0.0
+openpyxl>=3.1.0,<4.0.0
+websockets>=12.0,<14.0
+opencv-python>=4.8.0,<5.0.0
+tensorflow>=2.15.0,<2.18.0
